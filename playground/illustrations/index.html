@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tracks illustrations</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c0d0e;
+      --panel: #171a1b;
+      --edge: #2a3032;
+      --ink: #5fd39a;
+      --paper: #c9c6be;
+      --dim: #8b918c;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 28px 16px 64px;
+    }
+    main { max-width: 960px; margin-inline: auto; display: grid; gap: 28px; }
+    header { display: grid; gap: 10px; }
+    .kicker, h1 {
+      margin: 0;
+      color: var(--ink);
+      font-weight: 400;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 13px;
+    }
+    h1 { font-size: 15px; }
+    p { margin: 0; max-width: 68ch; line-height: 1.6; color: var(--paper); }
+    .section-cap {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 6px 18px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .section-cap span { color: var(--dim); letter-spacing: 0.08em; }
+    a { color: var(--ink); }
+    section { display: grid; gap: 8px; }
+    iframe {
+      width: 100%;
+      height: 900px;
+      border: 0;
+      background: var(--bg);
+      border-radius: 22px;
+    }
+    footer { color: var(--dim); display: flex; flex-wrap: wrap; gap: 8px 18px; }
+    @media (max-width: 720px) {
+      iframe { height: 680px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="kicker">Tracks</p>
+      <h1>Illustrations</h1>
+      <p>Four isometric figures for the design trial. Thin off-white line, one mint accent, monospace captions. Press a part: the readout in the lower right changes. Each figure is its own file. Save SVG writes a plate you can drop into Figma.</p>
+    </header>
+
+    <section id="experiment">
+      <div class="section-cap">
+        <a href="./experiment.html">Fig 1 · Experiment</a>
+        <span>Same task, with and without tools</span>
+      </div>
+      <iframe src="./experiment.html" title="Fig 1 Experiment"></iframe>
+    </section>
+
+    <section id="sandbox">
+      <div class="section-cap">
+        <a href="./sandbox.html">Fig 2 · Sandbox</a>
+        <span>A run in its own sandbox</span>
+      </div>
+      <iframe src="./sandbox.html" title="Fig 2 Sandbox"></iframe>
+    </section>
+
+    <section id="library">
+      <div class="section-cap">
+        <a href="./library.html">Fig 3 · Library</a>
+        <span>Repositories, skills, MCP, CLI</span>
+      </div>
+      <iframe src="./library.html" title="Fig 3 Library"></iframe>
+    </section>
+
+    <section id="getting-started">
+      <div class="section-cap">
+        <a href="./getting-started.html">Fig 4 · Getting started</a>
+        <span>Empty state</span>
+      </div>
+      <iframe src="./getting-started.html" title="Fig 4 Getting started"></iframe>
+    </section>
+
+    <footer>
+      <a href="./svg/experiment.svg">experiment.svg</a>
+      <a href="./svg/sandbox.svg">sandbox.svg</a>
+      <a href="./svg/library.svg">library.svg</a>
+      <a href="./svg/getting-started.svg">getting-started.svg</a>
+    </footer>
+  </main>
+</body>
+</html>

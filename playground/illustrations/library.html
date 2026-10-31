@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fig 3 · Library — Tracks</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c0d0e;
+      --panel: #171a1b;
+      --edge: #2a3032;
+      --line: #e4e1d8;
+      --detail: #7d8682;
+      --body: #171a1b;
+      --deck: #1c2223;
+      --ink: #5fd39a;
+      --ink-hi: #d8ffee;
+      --live: #5fd39a;
+      --glass: #101416;
+      --paper: #c9c6be;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #e9eaea; --panel: #f6f6f5; --edge: #d6d8d8; --line: #1c2224; --detail: #8a938f;
+      --body: #f4f5f4; --deck: #e7ebe9; --ink: #0d7a49; --ink-hi: #083d26; --live: #0e8f56;
+      --glass: #e3e8e6; --paper: #3c4442;
+    }
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        color-scheme: light;
+        --bg: #e9eaea; --panel: #f6f6f5; --edge: #d6d8d8; --line: #1c2224; --detail: #8a938f;
+        --body: #f4f5f4; --deck: #e7ebe9; --ink: #0d7a49; --ink-hi: #083d26; --live: #0e8f56;
+        --glass: #e3e8e6; --paper: #3c4442;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--paper); font-family: var(--mono); font-size: 13px; padding: 20px 16px 32px; }
+    main { max-width: 880px; margin-inline: auto; display: grid; gap: 14px; }
+    figure { margin: 0; background: var(--panel); border: 1px solid var(--edge); border-radius: 22px; padding: 22px 26px 18px; display: grid; gap: 6px; }
+    .cap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 18px; color: var(--ink); text-transform: uppercase; letter-spacing: 0.14em; }
+    .cap .fig, .cap .hi { text-transform: none; letter-spacing: 0.04em; }
+    .cap .hi { color: var(--ink-hi); }
+    svg { width: 100%; height: auto; display: block; touch-action: manipulation; user-select: none; }
+    svg:focus-visible { outline: 2px solid var(--live); outline-offset: 4px; border-radius: 8px; }
+    p { margin: 0; max-width: 68ch; line-height: 1.6; }
+    kbd { font: inherit; color: var(--ink); border: 1px solid var(--edge); border-radius: 4px; padding: 0 4px; }
+    button { font: inherit; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); background: transparent; border: 1px solid var(--edge); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+    button:hover, button:focus-visible { border-color: var(--live); outline: none; }
+    @media (prefers-reduced-motion: reduce) { .press { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main>
+    <figure>
+      <div class="cap"><span class="fig">Fig 3</span><span>Library</span></div>
+      <svg id="stage" viewBox="128 8 390 472" role="img" tabindex="0" aria-label="Isometric figure of the Tracks library. Press a drawer to open repositories, skills, MCP servers, or command-line tools.">
+        <style>
+          .face { fill: var(--body); stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+          .face.top { fill: var(--deck); }
+          .detail { fill: none; stroke: var(--detail); stroke-width: 1; vector-effect: non-scaling-stroke; }
+          .glass { fill: var(--glass); stroke: var(--detail); stroke-width: 1; vector-effect: non-scaling-stroke; }
+          .crystal { fill: none; stroke: var(--live); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; pointer-events: none; }
+          .particle { fill: var(--live); stroke: none; pointer-events: none; }
+          .label, .shelf, .lcd, .quiet { font-family: var(--mono); pointer-events: none; }
+          .label { fill: var(--live); font-size: 9px; letter-spacing: 0.14em; }
+          .shelf { fill: var(--live); font-size: 8px; letter-spacing: 0.06em; }
+          .lcd { fill: var(--live); font-size: 8px; letter-spacing: 0.04em; }
+          .quiet { fill: var(--detail); font-size: 7px; letter-spacing: 0.12em; }
+          .press, .press .face { cursor: pointer; }
+          .press { transition: transform 60ms ease-out; }
+          .press.down { transform: translateY(4px); }
+          .drawer.open { transform: translate(-16px, 9px); }
+          .drawer.open.down { transform: translate(-16px, 13px); }
+          .press.down .face, .press:hover .face.top, .drawer.open .face { stroke: var(--live); }
+          #mark { opacity: 0.4; }
+          #mark.on { opacity: 1; }
+        </style>
+        <g id="scene"></g>
+      </svg>
+      <div class="cap"><span>Press a drawer</span><span class="hi" id="readout" aria-live="polite">closed · 4 shelves</span></div>
+    </figure>
+    <p>Repositories, skills, MCP servers, and command-line tools. Keys <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> open a shelf. Press it again to close. <kbd>Esc</kbd> closes too.</p>
+    <p><button type="button" id="save">Save SVG</button></p>
+  </main>
+  <script>
+    const C = Math.cos(Math.PI / 6), S = Math.sin(Math.PI / 6), OX = 258, OY = 250;
+    const P = (x, y, z) => [(x - y) * C + OX, (x + y) * S - z + OY];
+    const D = (x, y, z) => [(x - y) * C, (x + y) * S - z];
+    const plane = (O, U, V) => { const o = P(...O), u = D(...U), v = D(...V); return `matrix(${u[0]} ${u[1]} ${v[0]} ${v[1]} ${o[0]} ${o[1]})`; };
+    const TOP = (x, y, z) => plane([x, y, z], [1, 0, 0], [0, 1, 0]);
+    const FRONT = (x, y, z) => plane([x, y, z], [1, 0, 0], [0, 0, -1]);
+    const SIDE = (x, y, z) => plane([x, y, z], [0, -1, 0], [0, 0, -1]);
+    const rect = (t, w, h, r = 0, cls = "face") => `<g transform="${t}"><rect class="${cls}" width="${w}" height="${h}" rx="${r}"/></g>`;
+    const box = (x, y, z, w, d, h, r = 0) =>
+      rect(SIDE(x + w, y + d, z + h), d, h, Math.min(r, h / 4)) +
+      rect(FRONT(x, y + d, z + h), w, h, Math.min(r, h / 4)) +
+      rect(TOP(x, y, z + h), w, d, r, "face top");
+
+    function gem(t, s = 1) {
+      const u = (n) => +(n * s).toFixed(2);
+      const pts = [[18, 0], [36, 14], [31, 58], [18, 74], [5, 58], [0, 14]].map(([x, y]) => `${u(x)},${u(y)}`).join(" ");
+      const d = `M ${u(18)} 0 L ${u(18)} ${u(74)} M 0 ${u(14)} L ${u(18)} ${u(26)} L ${u(36)} ${u(14)}`;
+      return `<g transform="${t}"><polygon class="crystal" points="${pts}"/><path class="crystal" d="${d}"/></g>`;
+    }
+
+    const shelves = [
+      { id: "repos", key: "1", name: "REPOS", kicker: "REPO", title: "acme/app", meta: "ref main", z: 148 },
+      { id: "skills", key: "2", name: "SKILLS", kicker: "SKILL", title: "product guide", meta: "3 files", z: 102 },
+      { id: "mcp", key: "3", name: "MCP", kicker: "MCP", title: "tracks mcp", meta: "connected", z: 56 },
+      { id: "cli", key: "4", name: "CLI", kicker: "CLI", title: "tracks cli", meta: "2 commands", z: 10 },
+    ];
+
+    let ribs = "";
+    for (let i = 1; i <= 5; i += 1) ribs += `<line class="detail" x1="10" y1="${i * 28}" x2="90" y2="${i * 28}"/>`;
+
+    let svg = box(0, 8, 0, 188, 100, 210, 4);
+    svg += `<g transform="${SIDE(188, 108, 210)}">${ribs}</g>`;
+    for (const shelf of [...shelves].sort((a, b) => a.z - b.z)) {
+      svg += `<g class="press drawer" id="drawer-${shelf.id}" data-press="${shelf.id}">`;
+      svg += box(14, 78, shelf.z, 160, 36, 38, 3);
+      svg += `<g transform="${FRONT(14, 114, shelf.z + 38)}"><text class="shelf" x="14" y="22">${shelf.name}</text></g>`;
+      svg += `</g>`;
+    }
+    svg += box(214, 40, 0, 78, 48, 112, 4);
+    svg += `<g transform="${FRONT(214, 88, 112)}"><rect class="glass" x="8" y="18" width="62" height="74" rx="3"/></g>`;
+    const [ix, iy] = P(228, 88, 52);
+    svg += `<text id="ix-k" class="quiet" x="${ix.toFixed(1)}" y="${(iy - 20).toFixed(1)}">LIBRARY</text>`;
+    svg += `<text id="ix-t" class="lcd" x="${ix.toFixed(1)}" y="${iy.toFixed(1)}">closed</text>`;
+    svg += `<text id="ix-m" class="lcd" x="${ix.toFixed(1)}" y="${(iy + 18).toFixed(1)}">4 shelves</text>`;
+    svg += `<g id="mark">${gem(FRONT(248, 24, 160), 0.34)}</g>`;
+    svg += `<g>${[[20, 16, 150, 1.5], [250, 20, 140, 1.8], [300, 48, 90, 1.3], [186, 12, 168, 1.4], [40, 20, 80, 1.2]].map(([x, y, z, r]) => {
+      const [sx, sy] = P(x, y, z);
+      return `<circle class="particle" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r}"/>`;
+    }).join("")}</g>`;
+
+    const stage = document.getElementById("stage");
+    document.getElementById("scene").innerHTML = svg;
+    let open = null;
+
+    function render() {
+      for (const shelf of shelves) document.getElementById(`drawer-${shelf.id}`).classList.toggle("open", open === shelf.id);
+      const shelf = shelves.find((item) => item.id === open);
+      document.getElementById("ix-k").textContent = shelf ? shelf.kicker : "LIBRARY";
+      document.getElementById("ix-t").textContent = shelf ? shelf.title : "closed";
+      document.getElementById("ix-m").textContent = shelf ? shelf.meta : "4 shelves";
+      document.getElementById("mark").classList.toggle("on", Boolean(shelf));
+      document.getElementById("readout").textContent = shelf ? `open · ${shelf.id} · ${shelf.meta}` : "closed · 4 shelves";
+    }
+    function flash(id) {
+      const el = document.getElementById(`drawer-${id}`);
+      if (!el) return;
+      el.classList.add("down");
+      setTimeout(() => el.classList.remove("down"), 110);
+    }
+    function act(id) {
+      open = open === id ? null : id;
+      render();
+    }
+    stage.addEventListener("click", (event) => {
+      const el = event.target.closest("[data-press]");
+      if (!el) return;
+      flash(el.dataset.press);
+      act(el.dataset.press);
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target.closest && event.target.closest("button")) return;
+      const shelf = shelves.find((item) => item.key === event.key);
+      if (shelf) { flash(shelf.id); act(shelf.id); event.preventDefault(); }
+      else if (event.key === "Escape" && open) { open = null; render(); event.preventDefault(); }
+    });
+    render();
+
+    const NS = "http://www.w3.org/2000/svg";
+    function plateSvg() {
+      const clone = stage.cloneNode(true);
+      const shapes = new Set(["rect", "polygon", "path", "line", "circle", "polyline", "ellipse"]);
+      const from = [stage, ...stage.querySelectorAll("*")];
+      const to = [clone, ...clone.querySelectorAll("*")];
+      from.forEach((el, index) => {
+        const dest = to[index];
+        const tag = el.tagName.toLowerCase();
+        const cs = getComputedStyle(el);
+        if (shapes.has(tag)) {
+          dest.setAttribute("fill", cs.fill);
+          dest.setAttribute("stroke", cs.stroke);
+          if (cs.stroke !== "none") {
+            dest.setAttribute("stroke-width", cs.strokeWidth);
+            dest.setAttribute("stroke-linejoin", "round");
+            dest.setAttribute("vector-effect", "non-scaling-stroke");
+          }
+        }
+        if (tag === "text") {
+          dest.setAttribute("fill", cs.fill);
+          dest.setAttribute("font-family", "ui-monospace, Menlo, Consolas, monospace");
+          dest.setAttribute("font-size", cs.fontSize);
+        }
+        if ((tag === "g" || tag === "circle") && cs.opacity !== "1") dest.setAttribute("opacity", cs.opacity);
+      });
+      clone.querySelector("style")?.remove();
+      clone.removeAttribute("tabindex");
+      clone.removeAttribute("role");
+      clone.removeAttribute("aria-label");
+      const vb = stage.viewBox.baseVal;
+      const top = 36;
+      const bottom = 40;
+      const wrap = document.createElementNS(NS, "svg");
+      wrap.setAttribute("xmlns", NS);
+      wrap.setAttribute("viewBox", `${vb.x} ${vb.y - top} ${vb.width} ${vb.height + top + bottom}`);
+      wrap.setAttribute("width", String(vb.width));
+      wrap.setAttribute("height", String(vb.height + top + bottom));
+      const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+      const hi = getComputedStyle(document.documentElement).getPropertyValue("--ink-hi").trim();
+      const panel = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim();
+      const bg = document.createElementNS(NS, "rect");
+      bg.setAttribute("x", String(vb.x));
+      bg.setAttribute("y", String(vb.y - top));
+      bg.setAttribute("width", String(vb.width));
+      bg.setAttribute("height", String(vb.height + top + bottom));
+      bg.setAttribute("fill", panel);
+      wrap.appendChild(bg);
+      const [fig, name, hint, readout] = [...document.querySelectorAll("figure .cap span")].map((el) => el.textContent.trim());
+      const cap = (x, y, str, anchor, fill) => {
+        const text = document.createElementNS(NS, "text");
+        text.setAttribute("x", String(x));
+        text.setAttribute("y", String(y));
+        text.setAttribute("fill", fill);
+        text.setAttribute("font-family", "ui-monospace, Menlo, Consolas, monospace");
+        text.setAttribute("font-size", "13");
+        text.setAttribute("letter-spacing", "1.8");
+        text.setAttribute("text-anchor", anchor);
+        text.textContent = str;
+        return text;
+      };
+      wrap.append(cap(vb.x + 22, vb.y - 14, fig, "start", ink), cap(vb.x + vb.width - 22, vb.y - 14, name.toUpperCase(), "end", ink));
+      while (clone.firstChild) wrap.appendChild(clone.firstChild);
+      wrap.append(cap(vb.x + 22, vb.y + vb.height + 24, hint.toUpperCase(), "start", ink), cap(vb.x + vb.width - 22, vb.y + vb.height + 24, readout, "end", hi));
+      return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(wrap)}`;
+    }
+    window.plateSvg = plateSvg;
+    document.getElementById("save").addEventListener("click", () => {
+      const blob = new Blob([plateSvg()], { type: "image/svg+xml" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "tracks-fig-3-library.svg";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    });
+  </script>
+</body>
+</html>

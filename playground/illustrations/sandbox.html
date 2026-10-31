@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fig 2 · Sandbox — Tracks</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c0d0e;
+      --panel: #171a1b;
+      --edge: #2a3032;
+      --line: #e4e1d8;
+      --detail: #7d8682;
+      --body: #171a1b;
+      --deck: #1c2223;
+      --ink: #5fd39a;
+      --ink-hi: #d8ffee;
+      --live: #5fd39a;
+      --glass: #101416;
+      --paper: #c9c6be;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #e9eaea; --panel: #f6f6f5; --edge: #d6d8d8; --line: #1c2224; --detail: #8a938f;
+      --body: #f4f5f4; --deck: #e7ebe9; --ink: #0d7a49; --ink-hi: #083d26; --live: #0e8f56;
+      --glass: #e3e8e6; --paper: #3c4442;
+    }
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        color-scheme: light;
+        --bg: #e9eaea; --panel: #f6f6f5; --edge: #d6d8d8; --line: #1c2224; --detail: #8a938f;
+        --body: #f4f5f4; --deck: #e7ebe9; --ink: #0d7a49; --ink-hi: #083d26; --live: #0e8f56;
+        --glass: #e3e8e6; --paper: #3c4442;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--paper); font-family: var(--mono); font-size: 13px; padding: 20px 16px 32px; }
+    main { max-width: 880px; margin-inline: auto; display: grid; gap: 14px; }
+    figure { margin: 0; background: var(--panel); border: 1px solid var(--edge); border-radius: 22px; padding: 22px 26px 18px; display: grid; gap: 6px; }
+    .cap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 18px; color: var(--ink); text-transform: uppercase; letter-spacing: 0.14em; }
+    .cap .fig, .cap .hi { text-transform: none; letter-spacing: 0.04em; }
+    .cap .hi { color: var(--ink-hi); }
+    svg { width: 100%; height: auto; display: block; touch-action: manipulation; user-select: none; }
+    svg:focus-visible { outline: 2px solid var(--live); outline-offset: 4px; border-radius: 8px; }
+    p { margin: 0; max-width: 68ch; line-height: 1.6; }
+    kbd { font: inherit; color: var(--ink); border: 1px solid var(--edge); border-radius: 4px; padding: 0 4px; }
+    button { font: inherit; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); background: transparent; border: 1px solid var(--edge); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+    button:hover, button:focus-visible { border-color: var(--live); outline: none; }
+    @media (prefers-reduced-motion: reduce) { .press { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main>
+    <figure>
+      <div class="cap"><span class="fig">Fig 2</span><span>Sandbox</span></div>
+      <svg id="stage" viewBox="28 16 464 424" role="img" tabindex="0" aria-label="Isometric figure of a Tracks run in its own sandbox. Press run to step through clone, prompt, and evidence.">
+        <style>
+          .face { fill: var(--body); stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+          .face.top { fill: var(--deck); }
+          .detail { fill: none; stroke: var(--detail); stroke-width: 1; vector-effect: non-scaling-stroke; }
+          .glass { fill: var(--glass); stroke: var(--detail); stroke-width: 1; vector-effect: non-scaling-stroke; }
+          .crystal { fill: none; stroke: var(--live); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; pointer-events: none; }
+          .particle { fill: var(--live); stroke: none; pointer-events: none; }
+          .label, .lcd, .quiet { font-family: var(--mono); pointer-events: none; }
+          .label { fill: var(--live); font-size: 9px; letter-spacing: 0.14em; }
+          .lcd { fill: var(--live); font-size: 8px; letter-spacing: 0.06em; }
+          .lcd.big { font-size: 13px; letter-spacing: 0.1em; }
+          .quiet { fill: var(--detail); font-size: 7px; letter-spacing: 0.12em; }
+          .pip { fill: var(--detail); stroke: none; }
+          .pip.on { fill: var(--live); }
+          .press, .press .face { cursor: pointer; }
+          .press { transition: transform 60ms ease-out; }
+          .press.down { transform: translateY(4px); }
+          .press.down .face, .press:hover .face.top { stroke: var(--live); }
+          #core { opacity: 0.4; }
+          #core.on { opacity: 1; }
+        </style>
+        <g id="scene"></g>
+      </svg>
+      <div class="cap"><span>Press run</span><span class="hi" id="readout" aria-live="polite">idle · empty directory</span></div>
+    </figure>
+    <p>One run, one sandbox, starting from an empty directory. <kbd>Enter</kbd> steps it: clone, prompt, evidence, then back to idle.</p>
+    <p><button type="button" id="save">Save SVG</button></p>
+  </main>
+  <script>
+    const C = Math.cos(Math.PI / 6), S = Math.sin(Math.PI / 6), OX = 230, OY = 176;
+    const P = (x, y, z) => [(x - y) * C + OX, (x + y) * S - z + OY];
+    const D = (x, y, z) => [(x - y) * C, (x + y) * S - z];
+    const plane = (O, U, V) => { const o = P(...O), u = D(...U), v = D(...V); return `matrix(${u[0]} ${u[1]} ${v[0]} ${v[1]} ${o[0]} ${o[1]})`; };
+    const TOP = (x, y, z) => plane([x, y, z], [1, 0, 0], [0, 1, 0]);
+    const FRONT = (x, y, z) => plane([x, y, z], [1, 0, 0], [0, 0, -1]);
+    const SIDE = (x, y, z) => plane([x, y, z], [0, -1, 0], [0, 0, -1]);
+    const rect = (t, w, h, r = 0, cls = "face") => `<g transform="${t}"><rect class="${cls}" width="${w}" height="${h}" rx="${r}"/></g>`;
+    const box = (x, y, z, w, d, h, r = 0) =>
+      rect(SIDE(x + w, y + d, z + h), d, h, Math.min(r, h / 4)) +
+      rect(FRONT(x, y + d, z + h), w, h, Math.min(r, h / 4)) +
+      rect(TOP(x, y, z + h), w, d, r, "face top");
+
+    function gem(t, s = 1) {
+      const u = (n) => +(n * s).toFixed(2);
+      const pts = [[18, 0], [36, 14], [31, 58], [18, 74], [5, 58], [0, 14]].map(([x, y]) => `${u(x)},${u(y)}`).join(" ");
+      const d = `M ${u(18)} 0 L ${u(18)} ${u(74)} M 0 ${u(14)} L ${u(18)} ${u(26)} L ${u(36)} ${u(14)} M ${u(5)} ${u(58)} L ${u(18)} ${u(26)} L ${u(31)} ${u(58)}`;
+      const pts2 = [[18, 0], [36, 14], [31, 58], [18, 74], [5, 58], [0, 14]].map(([x, y]) => `${u(x) + u(7)},${u(y) + u(4)}`).join(" ");
+      return `<g transform="${t}"><polygon class="crystal" points="${pts}"/><polygon class="crystal" points="${pts2}"/><path class="crystal" d="${d}"/></g>`;
+    }
+
+    let grid = "";
+    for (let i = 20; i < 260; i += 20) grid += `<line class="detail" x1="${i}" y1="4" x2="${i}" y2="186"/>`;
+    for (let j = 20; j < 190; j += 20) grid += `<line class="detail" x1="4" y1="${j}" x2="256" y2="${j}"/>`;
+
+    const steps = [
+      { readout: "idle · empty directory", rows: ["IDLE", "empty", "ready"] },
+      { readout: "running · 1/3 · clone", rows: ["CLONE", "repo", "main"] },
+      { readout: "running · 2/3 · prompt", rows: ["PROMPT", "agent", "inside"] },
+      { readout: "passed · 14s · evidence 3", rows: ["PASSED", "14s", "evidence"] },
+    ];
+
+    let svg = box(0, 0, 0, 260, 190, 8, 2);
+    svg += `<g transform="${TOP(0, 0, 8)}">${grid}</g>`;
+    svg += box(16, 0, 8, 228, 6, 120, 1);
+    svg += box(0, 6, 8, 6, 168, 120, 1);
+    svg += `<g id="core">${gem(FRONT(196, 28, 96), 0.48)}</g>`;
+    svg += box(78, 40, 8, 110, 70, 64, 4);
+    svg += `<g transform="${FRONT(78, 110, 72)}"><rect class="glass" x="12" y="10" width="86" height="44" rx="3"/></g>`;
+    svg += `<g transform="${TOP(78, 40, 72)}">
+      <circle id="pip0" class="pip" cx="78" cy="18" r="2.4"/>
+      <circle id="pip1" class="pip" cx="88" cy="18" r="2.4"/>
+      <circle id="pip2" class="pip" cx="98" cy="18" r="2.4"/>
+    </g>`;
+    svg += `<g id="run" class="press" data-press="run">${box(96, 140, 8, 72, 36, 18, 4)}
+      <g transform="${TOP(96, 140, 26)}"><text class="label" x="36" y="22" text-anchor="middle">RUN</text></g>
+    </g>`;
+    const [wx, wy] = P(40, 6, 108);
+    svg += `<text class="label" x="${wx.toFixed(1)}" y="${wy.toFixed(1)}">SANDBOX</text>`;
+    const [lx, ly] = P(100, 110, 40);
+    svg += `<text id="log0" class="lcd big" x="${lx.toFixed(1)}" y="${(ly - 16).toFixed(1)}">IDLE</text>`;
+    svg += `<text id="log1" class="lcd" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}">empty</text>`;
+    svg += `<text id="log2" class="lcd" x="${lx.toFixed(1)}" y="${(ly + 14).toFixed(1)}">ready</text>`;
+    svg += `<g id="dust">${[[24, 20, 90, 1.4], [240, 16, 110, 1.8], [250, 70, 50, 1.3], [30, 90, 40, 1.2], [150, 14, 140, 2], [210, 100, 30, 1.5]].map(([x, y, z, r]) => {
+      const [sx, sy] = P(x, y, z);
+      return `<circle class="particle" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r}"/>`;
+    }).join("")}</g>`;
+
+    const stage = document.getElementById("stage");
+    document.getElementById("scene").innerHTML = svg;
+    let step = 0;
+
+    function render() {
+      const current = steps[step];
+      current.rows.forEach((row, index) => { document.getElementById(`log${index}`).textContent = row; });
+      for (let i = 0; i < 3; i += 1) document.getElementById(`pip${i}`).classList.toggle("on", i < step);
+      document.getElementById("core").classList.toggle("on", step > 0);
+      document.getElementById("readout").textContent = current.readout;
+    }
+    function flash() {
+      const el = document.getElementById("run");
+      el.classList.add("down");
+      setTimeout(() => el.classList.remove("down"), 110);
+    }
+    function act() {
+      step = (step + 1) % steps.length;
+      render();
+    }
+    stage.addEventListener("click", (event) => {
+      if (!event.target.closest("#run")) return;
+      flash();
+      act();
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target.closest && event.target.closest("button")) return;
+      if (event.key === "Enter" || event.key === " ") { flash(); act(); event.preventDefault(); }
+    });
+    render();
+
+    const NS = "http://www.w3.org/2000/svg";
+    function plateSvg() {
+      const clone = stage.cloneNode(true);
+      const shapes = new Set(["rect", "polygon", "path", "line", "circle", "polyline", "ellipse"]);
+      const from = [stage, ...stage.querySelectorAll("*")];
+      const to = [clone, ...clone.querySelectorAll("*")];
+      from.forEach((el, index) => {
+        const dest = to[index];
+        const tag = el.tagName.toLowerCase();
+        const cs = getComputedStyle(el);
+        if (shapes.has(tag)) {
+          dest.setAttribute("fill", cs.fill);
+          dest.setAttribute("stroke", cs.stroke);
+          if (cs.stroke !== "none") {
+            dest.setAttribute("stroke-width", cs.strokeWidth);
+            dest.setAttribute("stroke-linejoin", "round");
+            dest.setAttribute("vector-effect", "non-scaling-stroke");
+          }
+        }
+        if (tag === "text") {
+          dest.setAttribute("fill", cs.fill);
+          dest.setAttribute("font-family", "ui-monospace, Menlo, Consolas, monospace");
+          dest.setAttribute("font-size", cs.fontSize);
+        }
+        if ((tag === "g" || tag === "circle") && cs.opacity !== "1") dest.setAttribute("opacity", cs.opacity);
+      });
+      clone.querySelector("style")?.remove();
+      clone.removeAttribute("tabindex");
+      clone.removeAttribute("role");
+      clone.removeAttribute("aria-label");
+      const vb = stage.viewBox.baseVal;
+      const top = 36;
+      const bottom = 40;
+      const wrap = document.createElementNS(NS, "svg");
+      wrap.setAttribute("xmlns", NS);
+      wrap.setAttribute("viewBox", `${vb.x} ${vb.y - top} ${vb.width} ${vb.height + top + bottom}`);
+      wrap.setAttribute("width", String(vb.width));
+      wrap.setAttribute("height", String(vb.height + top + bottom));
+      const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+      const hi = getComputedStyle(document.documentElement).getPropertyValue("--ink-hi").trim();
+      const panel = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim();
+      const bg = document.createElementNS(NS, "rect");
+      bg.setAttribute("x", String(vb.x));
+      bg.setAttribute("y", String(vb.y - top));
+      bg.setAttribute("width", String(vb.width));
+      bg.setAttribute("height", String(vb.height + top + bottom));
+      bg.setAttribute("fill", panel);
+      wrap.appendChild(bg);
+      const [fig, name, hint, readout] = [...document.querySelectorAll("figure .cap span")].map((el) => el.textContent.trim());
+      const cap = (x, y, str, anchor, fill) => {
+        const text = document.createElementNS(NS, "text");
+        text.setAttribute("x", String(x));
+        text.setAttribute("y", String(y));
+        text.setAttribute("fill", fill);
+        text.setAttribute("font-family", "ui-monospace, Menlo, Consolas, monospace");
+        text.setAttribute("font-size", "13");
+        text.setAttribute("letter-spacing", "1.8");
+        text.setAttribute("text-anchor", anchor);
+        text.textContent = str;
+        return text;
+      };
+      wrap.append(cap(vb.x + 22, vb.y - 14, fig, "start", ink), cap(vb.x + vb.width - 22, vb.y - 14, name.toUpperCase(), "end", ink));
+      while (clone.firstChild) wrap.appendChild(clone.firstChild);
+      wrap.append(cap(vb.x + 22, vb.y + vb.height + 24, hint.toUpperCase(), "start", ink), cap(vb.x + vb.width - 22, vb.y + vb.height + 24, readout, "end", hi));
+      return `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(wrap)}`;
+    }
+    window.plateSvg = plateSvg;
+    document.getElementById("save").addEventListener("click", () => {
+      const blob = new Blob([plateSvg()], { type: "image/svg+xml" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "tracks-fig-2-sandbox.svg";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    });
+  </script>
+</body>
+</html>
