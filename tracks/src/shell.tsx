@@ -1,56 +1,89 @@
-import { useState, type ReactNode } from "react";
-import { Link, NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  Clock3,
+  LayoutGrid,
+  Library,
+  PanelLeft,
+  Play,
+  SquarePen,
+} from "lucide-react";
+import {
+  AISidebar,
+  type SidebarResource,
+} from "@/components/agents/ai-sidebar";
+import {
+  AnimatedSidebar,
+  AnimatedSidebarContent,
+  AnimatedSidebarFooter,
+  AnimatedSidebarGroup,
+  AnimatedSidebarGroupContent,
+  AnimatedSidebarGroupLabel,
+  AnimatedSidebarHeader,
+  AnimatedSidebarInset,
+  AnimatedSidebarMenu,
+  AnimatedSidebarMenuButton,
+  AnimatedSidebarMenuItem,
+  AnimatedSidebarProvider,
+  AnimatedSidebarRail,
+  AnimatedSidebarTrigger,
+  useAnimatedSidebar,
+} from "@/components/motion/animated-sidebar";
 import { money, useStore } from "./store";
 import { Dialog, Icon, Logo } from "./ui";
+import { activeIdFromPath, buildTree, reconcile, routeFor } from "./workspace-tree";
 
-const experience = [
-  { label: "Experiments", to: "experiments", icon: "flask" },
-  { label: "Runs", to: "runs", icon: "play" },
-  { label: "Library", to: "library/repositories", icon: "book" },
-];
-
-const library = [
-  { label: "Repositories", to: "library/repositories" },
-  { label: "Skills", to: "library/skills" },
-  { label: "MCP servers", to: "library/mcp-servers" },
-  { label: "Command-line tools", to: "library/command-line-tools" },
-];
-
-const account = [
-  { label: "Members", to: "members", icon: "users" },
-  { label: "API keys", to: "api-keys", icon: "key" },
-  { label: "Billing", to: "billing", icon: "card" },
-  { label: "Settings", to: "settings", icon: "settings" },
-];
+const actions = [
+  { label: "New run", icon: SquarePen, to: "runs/new" },
+  { label: "Experiments", icon: LayoutGrid, to: "experiments" },
+  { label: "Runs", icon: Play, to: "runs" },
+  { label: "Library", icon: Library, to: "library/repositories" },
+  { label: "Analytics", icon: Clock3, to: "analytics" },
+] as const;
 
 export function Shell({ children }: { children: ReactNode }) {
+  return (
+    <AnimatedSidebarProvider className="h-dvh min-h-0 bg-background">
+      <WorkspaceSidebar />
+      <WorkspaceInset>{children}</WorkspaceInset>
+    </AnimatedSidebarProvider>
+  );
+}
+
+function WorkspaceSidebar() {
   const store = useStore();
   const { org = "" } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
-  const [navOpen, setNavOpen] = useState(false);
+  const sidebar = useAnimatedSidebar();
+  const organization = store.organizations.find((item) => item.id === org);
   const [orgOpen, setOrgOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [orgName, setOrgName] = useState("");
-  const organization = store.organizations.find((item) => item.id === org);
-  const base = `/${org}`;
-  const libraryOpen = location.pathname.includes("/library");
+  const [items, setItems] = useState<SidebarResource[]>(() => buildTree(store, org));
+  const active = activeIdFromPath(location.pathname, org, store);
+  const signature = JSON.stringify(buildTree(store, org));
 
-  const crumbs = breadcrumb(location.pathname, org, store);
+  useEffect(() => {
+    const fresh = JSON.parse(signature) as SidebarResource[];
+    setItems((current) => {
+      const sameOrg = current.some((item) => item.id === "experiments") && fresh.some((item) => item.label === "Experiments");
+      if (!sameOrg) return fresh;
+      return reconcile(current, fresh);
+    });
+  }, [signature]);
+
+  function open(path: string) {
+    navigate(`/${org}/${path}`);
+    if (sidebar.isMobile) sidebar.setOpenMobile(false);
+  }
 
   return (
-    <div className={`shell${collapsed ? " collapsed" : ""}${navOpen ? " nav-open" : ""}`}>
-      {navOpen ? <button className="scrim" aria-label="Close navigation" onClick={() => setNavOpen(false)} /> : null}
-      <aside className="sidebar">
-        <div className="side-head">
-          <Logo to="/" />
-          <button className="icon-btn" style={{ marginLeft: "auto" }} aria-label="Collapse sidebar" onClick={() => setCollapsed((value) => !value)}>
-            <Icon name="panel" />
-          </button>
-        </div>
-        <div className="org-wrap">
+    <AnimatedSidebar ariaLabel="Workspace resources" collapsible="offcanvas" panelClassName="bg-background">
+      <AnimatedSidebarHeader className="gap-3 px-3 py-3">
+        <Logo to="/" />
+        <div className="relative">
           <button className="org-btn" aria-expanded={orgOpen} onClick={() => setOrgOpen((value) => !value)}>
             <strong style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>{organization?.name ?? "Organization"}</strong>
             <span aria-hidden="true">▾</span>
@@ -87,99 +120,86 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
         </div>
-        <nav className="side-scroll" aria-label="Main" onClick={() => setNavOpen(false)}>
-          <div className="nav-label">Readiness</div>
-          <div className="nav-label">Experience</div>
-          {experience.map((item) => (
-            <NavLink key={item.to} className={({ isActive }) => `nav-link${isActive && item.to !== "library/repositories" ? " active" : ""}`} to={`${base}/${item.to}`}>
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-          {libraryOpen
-            ? library.map((item) => (
-                <NavLink key={item.to} className={({ isActive }) => `nav-sub${isActive ? " active" : ""}`} to={`${base}/${item.to}`}>
-                  {item.label}
-                </NavLink>
-              ))
-            : null}
-          <div className="nav-label">Analytics</div>
-          <NavLink className={({ isActive }) => `nav-link${isActive ? " active" : ""}`} to={`${base}/analytics`}>
-            <Icon name="chart" />
-            <span>Analytics</span>
-          </NavLink>
-          <div style={{ height: 12 }} />
-          {account.map((item) => (
-            <NavLink key={item.to} className={({ isActive }) => `nav-link${isActive ? " active" : ""}`} to={`${base}/${item.to}`}>
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-        <div className="side-foot" style={{ position: "relative" }}>
-          <button className="org-btn" style={{ border: 0 }} onClick={() => setUserOpen((value) => !value)}>
-            <span className="user">{store.you.name.slice(0, 1)}</span>
-            <span className="who">
-              <strong>{store.you.name}</strong>
-              <span>User profile</span>
-            </span>
-          </button>
-          {userOpen ? (
-            <div className="menu" style={{ top: "auto", bottom: "100%" }}>
-              <button
-                className="menu-item"
-                onClick={() => {
-                  store.setTheme(store.theme === "dark" ? "light" : "dark");
-                  setUserOpen(false);
+      </AnimatedSidebarHeader>
+      <AnimatedSidebarContent className="gap-4 overflow-hidden px-2 py-2">
+        <AnimatedSidebarGroup className="shrink-0 px-1 py-0">
+          <AnimatedSidebarGroupContent>
+            <AnimatedSidebarMenu className="gap-1">
+              {actions.map(({ label, icon: ActionIcon, to }) => (
+                <AnimatedSidebarMenuItem key={label}>
+                  <AnimatedSidebarMenuButton
+                    icon={<ActionIcon className="size-4" />}
+                    isActive={location.pathname === `/${org}/${to}`}
+                    onSelect={() => open(to)}
+                    className="font-normal text-foreground"
+                  >
+                    {label}
+                  </AnimatedSidebarMenuButton>
+                </AnimatedSidebarMenuItem>
+              ))}
+            </AnimatedSidebarMenu>
+          </AnimatedSidebarGroupContent>
+        </AnimatedSidebarGroup>
+        <AnimatedSidebarGroup className="min-h-0 flex-1 px-1 py-0">
+          <AnimatedSidebarGroupLabel className="mb-1 h-8 px-2 text-xs font-medium normal-case tracking-normal">
+            Projects
+          </AnimatedSidebarGroupLabel>
+          <AnimatedSidebarGroupContent className="relative min-h-0 flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto overscroll-contain pb-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <AISidebar
+                items={items}
+                activeId={active}
+                defaultExpandedIds={["experiments", "runs", "library", "analytics"]}
+                ariaLabel="Tracks resources"
+                onActiveChange={(id) => {
+                  const path = routeFor(id, store);
+                  if (path) open(path);
                 }}
-              >
-                <Icon name={store.theme === "dark" ? "sun" : "moon"} /> Theme
-              </button>
-              <button
-                className="menu-item"
-                onClick={() => {
-                  setUserOpen(false);
-                  navigate("/");
+                onItemsChange={setItems}
+                onRename={(item, label) => {
+                  const experiment = store.experiments.find((entry) => entry.id === item.id);
+                  if (experiment) store.updateExperiment({ ...experiment, name: label });
                 }}
-              >
-                <Icon name="out" /> Sign out
-              </button>
+                onMove={async () => {
+                  await new Promise((resolve) => window.setTimeout(resolve, 450));
+                }}
+              />
             </div>
-          ) : null}
-        </div>
-      </aside>
-      <div className="main">
-        <header className="topbar">
-          <button className="icon-btn mobile-only" aria-label="Open navigation" onClick={() => setNavOpen(true)}>
-            <Icon name="menu" />
-          </button>
-          <nav className="crumbs" aria-label="Breadcrumb">
-            {crumbs.map((crumb, index) => (
-              <span key={crumb.label} style={{ display: "contents" }}>
-                {index > 0 ? <span aria-hidden="true">/</span> : null}
-                {crumb.to && index < crumbs.length - 1 ? <Link to={crumb.to}>{crumb.label}</Link> : <strong>{crumb.label}</strong>}
-              </span>
-            ))}
-          </nav>
-          {organization ? (
-            <Link className="balance" to={`${base}/billing`}>
-              <span>Balance </span>
-              {money(organization.balanceCents)}
-            </Link>
-          ) : null}
-        </header>
-        {store.notice ? (
-          <div className="page" style={{ paddingBottom: 0 }}>
-            <div className="alert" style={{ background: "color-mix(in oklab, var(--success) 12%, transparent)" }}>
-              <span>{store.notice}</span>{" "}
-              <button className="menu-btn" onClick={() => store.setNotice(null)}>
-                Dismiss
-              </button>
-            </div>
+          </AnimatedSidebarGroupContent>
+        </AnimatedSidebarGroup>
+      </AnimatedSidebarContent>
+      <AnimatedSidebarFooter className="relative p-2">
+        <button className="org-btn" style={{ border: 0 }} onClick={() => setUserOpen((value) => !value)}>
+          <span className="user">{store.you.name.slice(0, 1)}</span>
+          <span className="who">
+            <strong>{store.you.name}</strong>
+            <span>User profile</span>
+          </span>
+        </button>
+        {userOpen ? (
+          <div className="menu" style={{ top: "auto", bottom: "100%" }}>
+            <button
+              className="menu-item"
+              onClick={() => {
+                store.setTheme(store.theme === "dark" ? "light" : "dark");
+                setUserOpen(false);
+              }}
+            >
+              <Icon name={store.theme === "dark" ? "sun" : "moon"} /> Theme
+            </button>
+            <button
+              className="menu-item"
+              onClick={() => {
+                setUserOpen(false);
+                navigate("/");
+              }}
+            >
+              <Icon name="out" /> Sign out
+            </button>
           </div>
         ) : null}
-        {children}
-      </div>
+      </AnimatedSidebarFooter>
+      <AnimatedSidebarRail />
       {creating ? (
         <Dialog title="Create an organization" description="Members see this name in the sidebar. The link uses an id derived from it." onClose={() => setCreating(false)}>
           <form
@@ -208,7 +228,52 @@ export function Shell({ children }: { children: ReactNode }) {
           </form>
         </Dialog>
       ) : null}
-    </div>
+    </AnimatedSidebar>
+  );
+}
+
+function WorkspaceInset({ children }: { children: ReactNode }) {
+  const store = useStore();
+  const { org = "" } = useParams();
+  const location = useLocation();
+  const organization = store.organizations.find((item) => item.id === org);
+  const crumbs = breadcrumb(location.pathname, org, store);
+
+  return (
+    <AnimatedSidebarInset className="min-h-0 h-dvh bg-background">
+      <header className="topbar">
+        <AnimatedSidebarTrigger className="-ml-1 text-muted-foreground" aria-label="Toggle sidebar">
+          <PanelLeft className="size-4" />
+        </AnimatedSidebarTrigger>
+        <nav className="crumbs" aria-label="Breadcrumb">
+          {crumbs.map((crumb, index) => (
+            <span key={crumb.label} style={{ display: "contents" }}>
+              {index > 0 ? <span aria-hidden="true">/</span> : null}
+              {crumb.to && index < crumbs.length - 1 ? <Link to={crumb.to}>{crumb.label}</Link> : <strong>{crumb.label}</strong>}
+            </span>
+          ))}
+        </nav>
+        {organization ? (
+          <Link className="balance" to={`/${org}/billing`}>
+            <span>Balance </span>
+            {money(organization.balanceCents)}
+          </Link>
+        ) : null}
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {store.notice ? (
+          <div className="page" style={{ paddingBottom: 0 }}>
+            <div className="alert" style={{ background: "color-mix(in oklab, var(--success) 12%, transparent)" }}>
+              <span>{store.notice}</span>{" "}
+              <button className="menu-btn" onClick={() => store.setNotice(null)}>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {children}
+      </div>
+    </AnimatedSidebarInset>
   );
 }
 
@@ -231,7 +296,7 @@ function breadcrumb(pathname: string, org: string, store: ReturnType<typeof useS
     ];
   }
   if (rest === "runs/new") return [{ label: "Runs", to: `${base}/runs` }, { label: "New run" }];
-  if (run) return [{ label: "Runs", to: `${base}/runs` }, { label: run.id }];
+  if (run) return [{ label: "Runs", to: `${base}/runs` }, { label: run.scenario ?? run.id }];
   const titles: Record<string, string> = {
     experiments: "Experiments",
     runs: "Runs",
