@@ -1,0 +1,8 @@
+{
+  "name": "alpic",
+  "private": true,
+  "description": "DUDESIGN x Alpic product design work",
+  "scripts": {
+    "mountain": "node scripts/serve-static.mjs playground/mountain"
+  }
+}
