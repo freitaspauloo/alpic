@@ -1,0 +1,8 @@
+{
+  "name": "alpic",
+  "private": true,
+  "description": "DUDESIGN x Alpic design trial. The mountain playground is a local copy of the idp.alpic.ai sign-in terrain.",
+  "scripts": {
+    "mountain": "node scripts/serve-static.mjs playground/mountain 4173"
+  }
+}
