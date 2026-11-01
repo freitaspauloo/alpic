@@ -30,6 +30,7 @@ export const SANS_FONTS: FontChoice[] = [
   { id: "fraunces", label: "Fraunces", value: face("Fraunces Variable", SERIF) },
   { id: "source-serif", label: "Source Serif", value: face("Source Serif 4 Variable", SERIF) },
   { id: "literata", label: "Literata", value: face("Literata Variable", SERIF) },
+  { id: "ibm-plex-serif", label: "IBM Plex Serif", value: face("IBM Plex Serif", SERIF) },
 ];
 
 export const MONO_FONTS: FontChoice[] = [

@@ -159,7 +159,7 @@ export function ExperimentMenu({
         ) : null}
         <MenuSeparator />
         <MenuAction icon={Trash2} onSelect={run(onRemove)}>
-          <span className="text-destructive">Remove</span>
+          Remove
         </MenuAction>
       </MorphPopoverContent>
     </MorphPopover>

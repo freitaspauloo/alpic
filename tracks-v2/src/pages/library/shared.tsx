@@ -266,7 +266,7 @@ export function RowActions({ name, actions }: { name: string; actions: RowAction
                 action.onSelect();
               }}
             >
-              {action.destructive ? <span className="text-destructive">{action.label}</span> : action.label}
+              {action.label}
             </MenuAction>
           </Fragment>
         ))}

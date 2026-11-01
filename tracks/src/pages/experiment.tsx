@@ -319,7 +319,7 @@ export function ExperimentEdit() {
               onClick={() =>
                 setDraft({
                   ...draft,
-                  agents: [...draft.agents, { id: `ag_${Date.now()}`, name: "Codex", model: "gpt-5", harness: "Codex" }],
+                  agents: [...draft.agents, { id: `ag_${Date.now()}`, name: "Codex", model: "gpt-6-astra", harness: "Codex" }],
                 })
               }
             >

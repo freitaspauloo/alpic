@@ -40,7 +40,7 @@ export function ApiKeys() {
         sortable: true,
         cell: (key) => (
           <span className="flex min-w-0 items-center gap-3">
-            <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+            <span className="grid size-7 shrink-0 place-items-center rounded-lg border border-border bg-muted text-muted-foreground">
               <KeyRound aria-hidden="true" className="size-3.5" />
             </span>
             <span className="truncate font-medium">{key.name}</span>

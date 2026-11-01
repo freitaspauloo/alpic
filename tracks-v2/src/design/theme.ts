@@ -20,6 +20,8 @@ export type Palette = {
   muted: string;
   mutedForeground: string;
   border: string;
+  /** Line used on lighter raised surfaces, where the canvas border disappears. */
+  borderRaised: string;
   borderStrong: string;
   ring: string;
   input: string;
@@ -50,8 +52,24 @@ export type TypeSettings = {
   eyebrow: number;
   /** Size of the mono specimen and code blocks, in px. */
   monoSize: number;
-  /** Display and title tracking, in em. */
+  /** Display tracking, in em. */
   tracking: number;
+  /** Title tracking, in em. */
+  trackingTitle: number;
+  /** Body tracking, in em. */
+  trackingBody: number;
+  /** Eyebrow tracking, in em. */
+  trackingEyebrow: number;
+  /** UI text weight. */
+  weight: number;
+  /** Display and title weight. */
+  displayWeight: number;
+  /** Body line height, unitless. */
+  leading: number;
+  /** Display line height, unitless. */
+  leadingDisplay: number;
+  /** Title line height, unitless. */
+  leadingTitle: number;
 };
 
 export type SpaceSettings = {
@@ -89,8 +107,19 @@ export function scaleRoles(body: number, ratio: number) {
   return { display, title, section, eyebrow, monoSize: eyebrow };
 }
 
-function sizedType(type: Omit<TypeSettings, "display" | "title" | "section" | "eyebrow" | "monoSize">): TypeSettings {
-  return { ...type, ...scaleRoles(type.body, type.ratio) };
+function sizedType(type: Pick<TypeSettings, "sans" | "mono" | "ratio" | "body" | "tracking">): TypeSettings {
+  return {
+    ...type,
+    ...scaleRoles(type.body, type.ratio),
+    weight: 400,
+    displayWeight: 500,
+    leading: 1.5,
+    leadingDisplay: 1.02,
+    leadingTitle: 1.2,
+    trackingTitle: Math.round(type.tracking * 0.7 * 1000) / 1000,
+    trackingBody: 0,
+    trackingEyebrow: 0.16,
+  };
 }
 
 const LIGHT: Palette = {
@@ -100,6 +129,7 @@ const LIGHT: Palette = {
   muted: "oklch(97% 0 0)",
   mutedForeground: "oklch(50% 0 0)",
   border: "oklch(15% 0 0 / 0.06)",
+  borderRaised: "oklch(15% 0 0 / 0.12)",
   borderStrong: "oklch(15% 0 0 / 0.12)",
   ring: "oklch(15% 0 0 / 0.12)",
   input: "oklch(15% 0 0 / 0.06)",
@@ -125,6 +155,7 @@ const DARK: Palette = {
   muted: "#1c1c1c",
   mutedForeground: "oklch(62% 0 0)",
   border: "rgb(255 255 255 / 0.05)",
+  borderRaised: "rgb(255 255 255 / 0.16)",
   borderStrong: "rgb(255 255 255 / 0.1)",
   ring: "rgb(255 255 255 / 0.1)",
   input: "rgb(255 255 255 / 0.05)",
@@ -167,10 +198,24 @@ const SERIF = 'Georgia, "Times New Roman", serif';
 
 const QUIET_LIGHT: Palette = {
   ...LIGHT,
+  background: "#f3f2f0",
+  foreground: "#262626",
+  card: "#faf9f8",
+  muted: "#faf9f8",
+  mutedForeground: "#8a8682",
+  border: "#e4e1dc",
+  borderRaised: "rgb(38 38 38 / 0.14)",
+  borderStrong: "rgb(38 38 38 / 0.18)",
+  ring: "rgb(38 38 38 / 0.16)",
+  input: "rgb(38 38 38 / 0.08)",
   primary: "#171717",
-  primaryForeground: "#ffffff",
+  primaryForeground: "#faf9f8",
   accent: "oklch(45% 0.02 260)",
-  accentForeground: "#ffffff",
+  accentForeground: "#faf9f8",
+  glassBg: "rgb(250 249 248 / 0.72)",
+  glassBorder: "rgb(38 38 38 / 0.08)",
+  glassStrongBg: "rgb(250 249 248 / 0.9)",
+  glassThinBg: "rgb(243 242 240 / 0.6)",
 };
 
 const QUIET_DARK: Palette = {
@@ -189,6 +234,7 @@ const INK_LIGHT: Palette = {
   muted: "#f3f3f3",
   mutedForeground: "#5e5e5e",
   border: "rgb(0 0 0 / 0.08)",
+  borderRaised: "rgb(0 0 0 / 0.14)",
   borderStrong: "rgb(0 0 0 / 0.16)",
   ring: "rgb(0 0 0 / 0.16)",
   input: "rgb(0 0 0 / 0.08)",
@@ -210,6 +256,7 @@ const INK_DARK: Palette = {
   muted: "#161616",
   mutedForeground: "#a1a1a1",
   border: "rgb(255 255 255 / 0.08)",
+  borderRaised: "rgb(255 255 255 / 0.18)",
   borderStrong: "rgb(255 255 255 / 0.16)",
   ring: "rgb(255 255 255 / 0.16)",
   input: "rgb(255 255 255 / 0.08)",
@@ -278,7 +325,7 @@ const BUILT_IN_THEMES: SavedTheme[] = [
 
 export const COLOR_GROUPS: { title: string; keys: (keyof Palette)[] }[] = [
   { title: "Surface", keys: ["background", "foreground", "card", "muted", "mutedForeground"] },
-  { title: "Line", keys: ["border", "borderStrong", "ring", "input"] },
+  { title: "Line", keys: ["border", "borderRaised", "borderStrong", "ring", "input"] },
   { title: "Brand", keys: ["primary", "primaryForeground"] },
   { title: "Status", keys: ["destructive", "success", "warning"] },
   { title: "Accent", keys: ["accent", "accentForeground", "neon", "violet"] },
@@ -292,6 +339,7 @@ export const COLOR_LABELS: Record<keyof Palette, string> = {
   muted: "Muted",
   mutedForeground: "Muted text",
   border: "Border",
+  borderRaised: "Raised border",
   borderStrong: "Strong border",
   ring: "Ring",
   input: "Input",
@@ -312,6 +360,7 @@ export const COLOR_LABELS: Record<keyof Palette, string> = {
 
 export const ALPHA_COLORS = new Set<keyof Palette>([
   "border",
+  "borderRaised",
   "borderStrong",
   "ring",
   "input",
@@ -328,6 +377,7 @@ const CSS_VAR: Record<keyof Palette, string> = {
   muted: "--muted",
   mutedForeground: "--muted-foreground",
   border: "--border",
+  borderRaised: "--border-raised",
   borderStrong: "--border-strong",
   ring: "--ring",
   input: "--input",
@@ -607,6 +657,14 @@ function mergeType(value: unknown): TypeSettings {
     ratio,
     body,
     tracking: typeof raw.tracking === "number" ? raw.tracking : fallback.tracking,
+    trackingTitle: typeof raw.trackingTitle === "number" ? raw.trackingTitle : Math.round((typeof raw.tracking === "number" ? raw.tracking : fallback.tracking) * 0.7 * 1000) / 1000,
+    trackingBody: typeof raw.trackingBody === "number" ? raw.trackingBody : fallback.trackingBody,
+    trackingEyebrow: typeof raw.trackingEyebrow === "number" ? raw.trackingEyebrow : fallback.trackingEyebrow,
+    weight: typeof raw.weight === "number" ? raw.weight : fallback.weight,
+    displayWeight: typeof raw.displayWeight === "number" ? raw.displayWeight : fallback.displayWeight,
+    leading: typeof raw.leading === "number" ? raw.leading : fallback.leading,
+    leadingDisplay: typeof raw.leadingDisplay === "number" ? raw.leadingDisplay : fallback.leadingDisplay,
+    leadingTitle: typeof raw.leadingTitle === "number" ? raw.leadingTitle : fallback.leadingTitle,
     display: size("display"),
     title: size("title"),
     section: size("section"),
@@ -979,10 +1037,15 @@ export function applyDesign(doc: Document, design: DesignState, active: Mode) {
   el.style.setProperty("--text-mono", `${roles.mono}px`);
   el.style.setProperty("--icon-stroke-width", String(design.icons.strokeWidth));
   installUploadedFonts(el.ownerDocument);
-  el.style.setProperty("--leading-display", "1.02");
+  el.style.setProperty("--font-weight", String(design.type.weight));
+  el.style.setProperty("--font-weight-display", String(design.type.displayWeight));
+  el.style.setProperty("--leading-body", String(design.type.leading));
+  el.style.setProperty("--leading-display", String(design.type.leadingDisplay));
+  el.style.setProperty("--leading-title", String(design.type.leadingTitle));
   el.style.setProperty("--tracking-display", `${design.type.tracking}em`);
-  el.style.setProperty("--tracking-title", `${design.type.tracking * 0.7}em`);
-  el.style.setProperty("--tracking-eyebrow", "0.16em");
+  el.style.setProperty("--tracking-title", `${design.type.trackingTitle}em`);
+  el.style.setProperty("--tracking-body", `${design.type.trackingBody}em`);
+  el.style.setProperty("--tracking-eyebrow", `${design.type.trackingEyebrow}em`);
 
   el.style.setProperty("--spacing", `${design.space.base}px`);
   el.style.setProperty("--space-page", `${design.space.page}px`);

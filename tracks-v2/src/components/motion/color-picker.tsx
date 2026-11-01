@@ -18,6 +18,7 @@ import {
 import {
   Children,
   type ComponentPropsWithRef,
+  type CSSProperties,
   createContext,
   isValidElement,
   type KeyboardEvent,
@@ -369,8 +370,62 @@ function keyStep(event: KeyboardEvent, big: number): { axis: "x" | "y"; delta: n
   }
 }
 
-const CHECKERBOARD =
-  "repeating-conic-gradient(#d4d4d8 0% 25%, #fafafa 0% 50%) 0 0 / 8px 8px";
+const CHECKERBOARD_IMAGE =
+  "repeating-conic-gradient(#d4d4d8 0% 25%, #fafafa 0% 50%)";
+const CHECKERBOARD = `${CHECKERBOARD_IMAGE} 0 0 / 8px 8px`;
+
+function relativeLuminance({ r, g, b }: Rgba): number {
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+/** Outline contrast follows the swatch, not the page theme. */
+function sampleBorderColor(rgba: Rgba): string {
+  const lum = relativeLuminance(rgba);
+  if (lum > 0.72) return "rgb(0 0 0 / 0.22)";
+  if (lum > 0.4) return "rgb(0 0 0 / 0.18)";
+  return "rgb(255 255 255 / 0.2)";
+}
+
+/**
+ * Fill and border live on one box. The fill is clipped to the padding edge so
+ * it cannot tint the rounded stroke — that mismatch is what made the corners
+ * a different color from the sides.
+ */
+function ColorSample({
+  color,
+  className,
+  style,
+}: {
+  color: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const rgba = parseHex(color) ?? BLACK;
+  const fill =
+    rgba.a >= 1
+      ? formatHex({ ...rgba, a: 1 })
+      : `rgb(${rgba.r} ${rgba.g} ${rgba.b} / ${rgba.a})`;
+  const translucent = rgba.a < 1;
+
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "box-border block border border-solid bg-clip-padding bg-origin-padding transition-[background-color,border-color] duration-150",
+        className,
+      )}
+      style={{
+        ...style,
+        backgroundColor: translucent ? undefined : fill,
+        backgroundImage: translucent
+          ? `linear-gradient(${fill}, ${fill}), ${CHECKERBOARD_IMAGE}`
+          : undefined,
+        backgroundSize: translucent ? "auto, 8px 8px" : undefined,
+        borderColor: sampleBorderColor(rgba),
+      }}
+    />
+  );
+}
 
 // The loupe lifts with a visible overshoot so it reads as picked up, unlike
 // the critically damped glide the thumb itself rides on.
@@ -684,17 +739,12 @@ export type ColorPickerSwatchProps = Omit<ComponentPropsWithRef<"span">, "childr
 export function ColorPickerSwatch({ className, style, ...props }: ColorPickerSwatchProps) {
   const { hex } = usePickerContext("ColorPickerSwatch");
   return (
-    <span
+    <ColorSample
       {...props}
-      aria-hidden="true"
-      className={cn("relative block size-9 shrink-0 overflow-hidden rounded-lg", className)}
-      style={{ ...style, background: CHECKERBOARD }}
-    >
-      <span
-        className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.1)] transition-colors duration-150"
-        style={{ backgroundColor: hex }}
-      />
-    </span>
+      color={hex}
+      className={cn("size-9 shrink-0 rounded-lg", className)}
+      style={style}
+    />
   );
 }
 
@@ -824,6 +874,14 @@ function ChannelField({ spec }: { spec: ChannelSpec }) {
             setDraft(null);
             commit();
           }
+        }}
+        onWheel={(event) => {
+          if (disabled) return;
+          event.preventDefault();
+          const delta = event.deltaY < 0 ? 1 : -1;
+          setDraft(null);
+          update(spec.set(clamp(shown + delta, 0, spec.max)));
+          commit();
         }}
         className={cn(FIELD_CLASS, "px-1 text-center")}
       />
@@ -997,16 +1055,7 @@ export function ColorPickerPreset({ value, label, className, onClick, ...props }
           className="pointer-events-none absolute -inset-[3px] rounded-full border-2 border-foreground/70"
         />
       )}
-      <span
-        aria-hidden="true"
-        className="absolute inset-0 overflow-hidden rounded-full"
-        style={{ background: CHECKERBOARD }}
-      >
-        <span
-          className="absolute inset-0 rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.1)]"
-          style={{ backgroundColor: normalized }}
-        />
-      </span>
+      <ColorSample color={normalized} className="absolute inset-0 rounded-full" />
     </motion.button>
   );
 }
@@ -1092,19 +1141,16 @@ export function ColorPickerTrigger({ className, children, onClick, ...props }: C
       )}
     >
       <span aria-hidden="true" className="relative size-6 shrink-0">
-        {/* The chip's empty socket while it is out being the area. */}
-        <span className="absolute inset-0 rounded-md border border-dashed border-foreground/20" />
-        {!open && (
+        {open ? (
+          <span className="absolute inset-0 rounded-md border border-dashed border-foreground/25" />
+        ) : (
           <motion.span
             layoutId={reduce ? undefined : `${id}-chip`}
             transition={MORPH}
-            className="absolute inset-0 overflow-hidden"
-            style={{ borderRadius: CHIP_RADIUS, background: CHECKERBOARD }}
+            className="absolute inset-0"
+            style={{ borderRadius: CHIP_RADIUS }}
           >
-            <span
-              className="absolute inset-0 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.1)]"
-              style={{ backgroundColor: hex, borderRadius: CHIP_RADIUS }}
-            />
+            <ColorSample color={hex} className="size-full rounded-md" style={{ borderRadius: CHIP_RADIUS }} />
           </motion.span>
         )}
       </span>

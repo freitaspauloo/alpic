@@ -45,6 +45,7 @@ const EFFORTS = ["Low", "Medium", "High"] as const;
 const HARNESSES: { value: Harness; description: string }[] = [
   { value: "Claude", description: "Anthropic's agent harness." },
   { value: "Codex", description: "OpenAI's agent harness." },
+  { value: "Cursor", description: "Cursor's agent harness." },
 ];
 
 export function NewRun() {
@@ -211,7 +212,7 @@ export function NewRun() {
                     setHarness(value);
                     setModel(HARNESS_MODELS[value][0]);
                   }}
-                  className="grid gap-3 sm:grid-cols-2"
+                  className="grid gap-3 sm:grid-cols-3"
                 >
                   {HARNESSES.map((item) => (
                     <Card key={item.value} size="compact" interactive selected={harness === item.value}>

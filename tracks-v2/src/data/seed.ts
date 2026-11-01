@@ -3,11 +3,12 @@ import type { ScenarioStarter, State, TrafficData, TrafficSource } from "./types
 /** The prototype's fixed "today". Every new record is stamped with it. */
 export const TODAY = "Oct 31, 2026";
 
-export const DEFAULT_AGENT = { name: "Claude", model: "claude-sonnet-4.5", harness: "Claude" } as const;
+export const DEFAULT_AGENT = { name: "Claude", model: "claude-sonnet-5.5", harness: "Claude" } as const;
 
 export const AGENT_PRESETS = [
-  { name: "Claude", model: "claude-sonnet-4.5", harness: "Claude" },
-  { name: "Codex", model: "gpt-5", harness: "Codex" },
+  { name: "Claude", model: "claude-sonnet-5.5", harness: "Claude" },
+  { name: "Codex", model: "gpt-6-astra", harness: "Codex" },
+  { name: "Cursor", model: "composer-2.5", harness: "Cursor" },
 ] as const;
 
 export const SCENARIO_STARTERS: ScenarioStarter[] = [
@@ -101,8 +102,8 @@ export function seed(): State {
           },
         ],
         agents: [
-          { id: "ag_claude", name: "Claude", model: "claude-sonnet-4.5", harness: "Claude" },
-          { id: "ag_codex", name: "Codex", model: "gpt-5", harness: "Codex" },
+          { id: "ag_claude", name: "Claude", model: "claude-sonnet-5.5", harness: "Claude" },
+          { id: "ag_codex", name: "Codex", model: "gpt-6-astra", harness: "Codex" },
         ],
         repositoryId: "repo_store",
         runsPerLaunch: 4,
@@ -121,7 +122,7 @@ export function seed(): State {
               "Create an account on acme.com using the supplied test identity. Complete verification using the supplied resources. Report whether the account is usable, and exactly where you stopped if you couldn’t finish.",
           },
         ],
-        agents: [{ id: "ag_claude2", name: "Claude", model: "claude-sonnet-4.5", harness: "Claude" }],
+        agents: [{ id: "ag_claude2", name: "Claude", model: "claude-sonnet-5.5", harness: "Claude" }],
         repositoryId: "repo_store",
         runsPerLaunch: 2,
         maxSpendCents: 1500,
@@ -139,7 +140,7 @@ export function seed(): State {
               "I need help with acme.com. Find an official way to get support or contact the business. Give me the working link or contact details and any instructions needed to use it.",
           },
         ],
-        agents: [{ id: "ag_codex2", name: "Codex", model: "gpt-5", harness: "Codex" }],
+        agents: [{ id: "ag_codex2", name: "Codex", model: "gpt-6-astra", harness: "Codex" }],
         repositoryId: null,
         runsPerLaunch: 1,
         maxSpendCents: 800,
@@ -159,7 +160,7 @@ export function seed(): State {
         prompt: "Find the published prices and explain what I would pay.",
         scenario: "Published prices",
         agent: "Claude",
-        model: "claude-sonnet-4.5",
+        model: "claude-sonnet-5.5",
         harness: "Claude",
         repository: "acme/storefront",
         status: "Passed",
@@ -176,7 +177,7 @@ export function seed(): State {
         prompt: "List every mandatory fee disclosed before payment.",
         scenario: "Mandatory fees",
         agent: "Claude",
-        model: "claude-sonnet-4.5",
+        model: "claude-sonnet-5.5",
         harness: "Claude",
         repository: "acme/storefront",
         status: "Passed",
@@ -193,7 +194,7 @@ export function seed(): State {
         prompt: "Find the published prices and explain what I would pay.",
         scenario: "Published prices",
         agent: "Codex",
-        model: "gpt-5",
+        model: "gpt-6-astra",
         harness: "Codex",
         repository: "acme/storefront",
         status: "Failed",
@@ -210,7 +211,7 @@ export function seed(): State {
         prompt: "List every mandatory fee disclosed before payment.",
         scenario: "Mandatory fees",
         agent: "Codex",
-        model: "gpt-5",
+        model: "gpt-6-astra",
         harness: "Codex",
         repository: "acme/storefront",
         status: "Passed",
@@ -227,7 +228,7 @@ export function seed(): State {
         prompt: "Create an account with the supplied test identity.",
         scenario: "Test identity",
         agent: "Claude",
-        model: "claude-sonnet-4.5",
+        model: "claude-sonnet-5.5",
         harness: "Claude",
         repository: "acme/storefront",
         status: "Running",
@@ -244,7 +245,7 @@ export function seed(): State {
         prompt: "Walk through returning a shipped order and tell me where the flow breaks.",
         scenario: null,
         agent: "Claude",
-        model: "claude-sonnet-4.5",
+        model: "claude-sonnet-5.5",
         harness: "Claude",
         repository: "acme/storefront",
         status: "Judging",

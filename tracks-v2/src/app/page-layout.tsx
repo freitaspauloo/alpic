@@ -41,8 +41,13 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
     <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
       <div className="flex min-w-0 flex-col gap-1">
         <h1
-          className="font-semibold text-foreground"
-          style={{ fontSize: "var(--text-title)", letterSpacing: "var(--tracking-title)" }}
+          className="text-foreground"
+          style={{
+            fontSize: "var(--text-title)",
+            fontWeight: "var(--font-weight-display)",
+            lineHeight: "var(--leading-title)",
+            letterSpacing: "var(--tracking-title)",
+          }}
         >
           {title}
         </h1>
@@ -73,7 +78,10 @@ export function PageSection({ title, description, actions, children, className }
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
             {title ? (
-              <h2 className="font-semibold text-foreground" style={{ fontSize: "var(--text-section)" }}>
+              <h2
+                className="text-foreground"
+                style={{ fontSize: "var(--text-section)", fontWeight: "var(--font-weight-display)", lineHeight: "var(--leading-title)" }}
+              >
                 {title}
               </h2>
             ) : null}

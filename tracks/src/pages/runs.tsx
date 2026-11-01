@@ -231,7 +231,7 @@ export function NewRun() {
   const repos = store.repositories.filter((item) => item.orgId === org);
   const [prompt, setPrompt] = useState("");
   const [agent, setAgent] = useState("Claude");
-  const [model, setModel] = useState("claude-sonnet-4.5");
+  const [model, setModel] = useState("claude-sonnet-5.5");
   const [harness, setHarness] = useState("Claude");
   const [effort, setEffort] = useState("Medium");
   const [fast, setFast] = useState(false);
@@ -241,8 +241,8 @@ export function NewRun() {
 
   const models = useMemo(
     () => ({
-      Claude: ["claude-sonnet-4.5", "claude-opus-4.5"],
-      Codex: ["gpt-5", "gpt-5-mini"],
+      Claude: ["claude-sonnet-5.5", "claude-opus-5.5", "claude-fable-5.1", "claude-haiku-5.5"],
+      Codex: ["gpt-6-astra", "gpt-6.1-sol", "gpt-6.1-terra", "gpt-6-sol", "gpt-6-luna"],
     }),
     [],
   );
