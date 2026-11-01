@@ -1,25 +1,82 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { money, passRate, useStore, type AgentSpec, type Experiment, type Scenario } from "../store";
-import { Page, Status } from "../ui";
+import type { TableColumn } from "@/components/motion/table";
+import { money, passRate, useStore, type AgentSpec, type Execution, type Experiment, type Run, type Scenario } from "../store";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  nativeSelectClassName,
+  Page,
+  SimpleDataTable,
+  Status,
+  TextAreaField,
+  FormShell,
+  InlineAlert,
+  TextField,
+} from "../ui";
 
 export function ExperimentDetail() {
   const { org = "", experimentId = "" } = useParams();
   const store = useStore();
   const experiment = store.experiments.find((item) => item.id === experimentId && item.orgId === org);
   const [error, setError] = useState<string | null>(null);
-  if (!experiment) {
-    return (
-      <Page title="Experiment">
-        <p className="muted">This experiment no longer exists.</p>
-      </Page>
-    );
-  }
-  const executions = store.executions.filter((item) => item.experimentId === experiment.id);
+  const executions = experiment ? store.executions.filter((item) => item.experimentId === experiment.id) : [];
   const latest = executions[0];
   const latestRuns = latest ? store.runs.filter((item) => item.executionId === latest.id) : [];
   const rate = passRate(latestRuns);
-  const repository = store.repositories.find((item) => item.id === experiment.repositoryId);
+  const repository = experiment ? store.repositories.find((item) => item.id === experiment.repositoryId) : undefined;
+
+  const latestRunColumns = useMemo((): TableColumn<Run>[] => {
+    return [
+      {
+        key: "run",
+        header: "Run",
+        cell: (run) => (
+          <Link className="font-medium hover:underline" to={`/${org}/runs/${run.id}`}>
+            {run.scenario ?? run.id}
+          </Link>
+        ),
+      },
+      {
+        key: "variant",
+        header: "Variant",
+        cell: (run) => <span className="text-muted-foreground">{run.agent} · {run.model}</span>,
+      },
+      { key: "status", header: "Status", cell: (run) => <Status status={run.status} /> },
+      {
+        key: "cost",
+        header: "Cost",
+        align: "right",
+        cell: (run) => <span className="tabular-nums">{money(run.costCents)}</span>,
+      },
+    ];
+  }, [org]);
+
+  const executionColumns = useMemo((): TableColumn<Execution>[] => {
+    return [
+      { key: "version", header: "Version", cell: (row) => `v${row.version}` },
+      { key: "status", header: "Status", cell: (row) => <Status status={row.status} /> },
+      { key: "started", header: "Started", cell: (row) => <span className="text-muted-foreground">{row.started}</span> },
+      {
+        key: "spend",
+        header: "Spend",
+        align: "right",
+        cell: (row) => <span className="tabular-nums">{money(row.spendCents)}</span>,
+      },
+    ];
+  }, []);
+
+  if (!experiment) {
+    return (
+      <Page title="Experiment">
+        <p className="text-muted-foreground">This experiment no longer exists.</p>
+      </Page>
+    );
+  }
 
   return (
     <Page
@@ -27,36 +84,37 @@ export function ExperimentDetail() {
       description={`Version ${experiment.version}`}
       action={
         <>
-          <Link className="btn btn-secondary" to={`/${org}/experiments/${experiment.id}/edit`}>
+          <ButtonLink to={`/${org}/experiments/${experiment.id}/edit`} variant="secondary">
             Edit
-          </Link>
-          <button
-            className="btn btn-primary"
+          </ButtonLink>
+          <Button
+            type="button"
             onClick={() => {
               const message = store.launch(experiment.id);
               setError(message);
             }}
           >
             {latest ? "Launch latest" : "Launch"}
-          </button>
+          </Button>
         </>
       }
     >
       {error ? (
-        <div className="alert" style={{ marginBottom: 16 }}>
-          <strong>Missing to start</strong>
-          {error}{" "}
+        <InlineAlert variant="destructive">
+          <strong>Missing to start</strong> {error}{" "}
           {error.includes("balance") || error.includes("funds") ? (
-            <Link to={`/${org}/billing`}>Add funds</Link>
+            <Link className="font-medium underline underline-offset-2" to={`/${org}/billing`}>
+              Add funds
+            </Link>
           ) : null}
-        </div>
+        </InlineAlert>
       ) : null}
-      <section className="card">
+      <Card variant="outlined">
         <div className="plan">
           <div>
             <h2>Scenarios</h2>
             {experiment.scenarios.length === 0 ? (
-              <p className="muted">No scenarios yet</p>
+              <p className="text-muted-foreground">No scenarios yet</p>
             ) : (
               <ol>
                 {experiment.scenarios.map((scenario, index) => (
@@ -74,7 +132,7 @@ export function ExperimentDetail() {
           <div>
             <h2>Agents</h2>
             {experiment.agents.length === 0 ? (
-              <p className="muted">No agents yet</p>
+              <p className="text-muted-foreground">No agents yet</p>
             ) : (
               <ul className="stack">
                 {experiment.agents.map((agent) => (
@@ -106,13 +164,17 @@ export function ExperimentDetail() {
             <strong>{money(experiment.maxSpendCents)}</strong>
           </div>
         </div>
-      </section>
+      </Card>
 
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="card-pad" style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+      <Card variant="outlined" className="mt-4">
+        <CardContent className="flex flex-wrap items-start justify-between gap-4 pb-0">
           <div>
-            <h2>Latest result</h2>
-            {!latest ? <p className="muted">Not launched yet</p> : <p className="muted">Last launched {latest.started}</p>}
+            <h2 className="text-base font-semibold">Latest result</h2>
+            {!latest ? (
+              <p className="text-sm text-muted-foreground">Not launched yet</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Last launched {latest.started}</p>
+            )}
           </div>
           {latest ? (
             <div className="stats" style={{ minWidth: 280 }}>
@@ -130,69 +192,22 @@ export function ExperimentDetail() {
               </div>
             </div>
           ) : null}
-        </div>
+        </CardContent>
         {latestRuns.length ? (
-          <div className="table-wrap" style={{ border: 0, borderTop: "1px solid var(--border-secondary)", borderRadius: 0 }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Run</th>
-                  <th>Variant</th>
-                  <th>Status</th>
-                  <th className="num">Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {latestRuns.map((run) => (
-                  <tr key={run.id}>
-                    <td>
-                      <Link className="rowlink" to={`/${org}/runs/${run.id}`}>
-                        {run.scenario ?? run.id}
-                      </Link>
-                    </td>
-                    <td className="muted">
-                      {run.agent} · {run.model}
-                    </td>
-                    <td>
-                      <Status status={run.status} />
-                    </td>
-                    <td className="num">{money(run.costCents)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <SimpleDataTable
+            data={latestRuns}
+            columns={latestRunColumns}
+            getRowId={(run) => run.id}
+            className="rounded-none border-0 border-t"
+          />
         ) : null}
-      </section>
+      </Card>
 
       {executions.length > 1 ? (
-        <section style={{ marginTop: 20 }}>
-          <h2 style={{ fontSize: 16 }}>Earlier executions</h2>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Version</th>
-                  <th>Status</th>
-                  <th>Started</th>
-                  <th className="num">Spend</th>
-                </tr>
-              </thead>
-              <tbody>
-                {executions.slice(1).map((execution) => (
-                  <tr key={execution.id}>
-                    <td>v{execution.version}</td>
-                    <td>
-                      <Status status={execution.status} />
-                    </td>
-                    <td className="muted">{execution.started}</td>
-                    <td className="num">{money(execution.spendCents)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <div className="mt-5 grid gap-3">
+          <h2 className="text-base font-semibold">Earlier executions</h2>
+          <SimpleDataTable data={executions.slice(1)} columns={executionColumns} getRowId={(row) => row.id} />
+        </div>
       ) : null}
     </Page>
   );
@@ -231,91 +246,97 @@ export function ExperimentEdit() {
       title="Edit experiment"
       description={draft.name}
       action={
-        <button
-          className="btn btn-primary"
+        <Button
+          type="button"
           onClick={() => {
             store.updateExperiment(draft);
             navigate(`/${org}/experiments/${draft.id}`);
           }}
         >
           Save
-        </button>
+        </Button>
       }
     >
       <form
-        className="form"
         onSubmit={(event) => {
           event.preventDefault();
           store.updateExperiment(draft);
           navigate(`/${org}/experiments/${draft.id}`);
         }}
       >
-        <div className="field">
-          <label htmlFor="name">Name</label>
-          <input id="name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-        </div>
-        <section className="card card-pad">
-          <h2>Scenarios</h2>
-          <div className="stack">
+        <FormShell className="max-w-3xl">
+        <TextField id="name" label="Name" value={draft.name} onChange={(value) => setDraft({ ...draft, name: value })} />
+        <Card variant="outlined">
+          <CardHeader>
+            <CardTitle as="h2">Scenarios</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
             {draft.scenarios.map((scenario, index) => (
-              <div key={scenario.id} className="field">
-                <label htmlFor={`sc-${scenario.id}`}>Scenario {index + 1}</label>
-                <input id={`sc-${scenario.id}`} value={scenario.name} onChange={(event) => updateScenario(scenario.id, { name: event.target.value })} />
-                <textarea rows={3} value={scenario.prompt} aria-label={`${scenario.name} prompt`} onChange={(event) => updateScenario(scenario.id, { prompt: event.target.value })} />
+              <div key={scenario.id} className="grid gap-3">
+                <TextField
+                  id={`sc-${scenario.id}`}
+                  label={`Scenario ${index + 1}`}
+                  value={scenario.name}
+                  onChange={(value) => updateScenario(scenario.id, { name: value })}
+                />
+                <TextAreaField
+                  id={`sc-prompt-${scenario.id}`}
+                  label={`${scenario.name} prompt`}
+                  rows={3}
+                  value={scenario.prompt}
+                  onChange={(value) => updateScenario(scenario.id, { prompt: value })}
+                />
               </div>
             ))}
-          </div>
-          <button
-            className="btn btn-secondary"
-            type="button"
-            style={{ marginTop: 12 }}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                scenarios: [...draft.scenarios, { id: `sc_${Date.now()}`, name: `Scenario ${draft.scenarios.length + 1}`, prompt: "" }],
-              })
-            }
-          >
-            Add scenario
-          </button>
-        </section>
-        <section className="card card-pad">
-          <h2>Agents</h2>
-          <div className="stack">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  scenarios: [...draft.scenarios, { id: `sc_${Date.now()}`, name: `Scenario ${draft.scenarios.length + 1}`, prompt: "" }],
+                })
+              }
+            >
+              Add scenario
+            </Button>
+          </CardContent>
+        </Card>
+        <Card variant="outlined">
+          <CardHeader>
+            <CardTitle as="h2">Agents</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
             {draft.agents.map((agent) => (
-              <div key={agent.id} className="split two">
-                <div className="field">
-                  <label htmlFor={`ag-${agent.id}`}>Agent</label>
-                  <input id={`ag-${agent.id}`} value={agent.name} onChange={(event) => updateAgent(agent.id, { name: event.target.value })} />
-                </div>
-                <div className="field">
-                  <label htmlFor={`model-${agent.id}`}>Model</label>
-                  <input id={`model-${agent.id}`} value={agent.model} onChange={(event) => updateAgent(agent.id, { model: event.target.value })} />
-                </div>
+              <div key={agent.id} className="grid gap-3 md:grid-cols-2">
+                <TextField id={`ag-${agent.id}`} label="Agent" value={agent.name} onChange={(value) => updateAgent(agent.id, { name: value })} />
+                <TextField id={`model-${agent.id}`} label="Model" value={agent.model} onChange={(value) => updateAgent(agent.id, { model: value })} />
               </div>
             ))}
-          </div>
-          <button
-            className="btn btn-secondary"
-            type="button"
-            style={{ marginTop: 12 }}
-            onClick={() =>
-              setDraft({
-                ...draft,
-                agents: [...draft.agents, { id: `ag_${Date.now()}`, name: "Codex", model: "gpt-5", harness: "Codex" }],
-              })
-            }
-          >
-            Add agent
-          </button>
-        </section>
-        <section className="card card-pad">
-          <h2>Repository and run settings</h2>
-          <div className="split two">
-            <div className="field">
-              <label htmlFor="repo">Repository</label>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  agents: [...draft.agents, { id: `ag_${Date.now()}`, name: "Codex", model: "gpt-5", harness: "Codex" }],
+                })
+              }
+            >
+              Add agent
+            </Button>
+          </CardContent>
+        </Card>
+        <Card variant="outlined">
+          <CardHeader>
+            <CardTitle as="h2">Repository and run settings</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-sm font-medium">Repository</span>
               <select
                 id="repo"
+                className={nativeSelectClassName}
                 value={draft.repositoryId ?? ""}
                 onChange={(event) => setDraft({ ...draft, repositoryId: event.target.value || null })}
               >
@@ -328,28 +349,23 @@ export function ExperimentEdit() {
                     </option>
                   ))}
               </select>
-            </div>
-            <div className="field">
-              <label htmlFor="spend">Maximum spend (USD)</label>
-              <input
-                id="spend"
-                inputMode="decimal"
-                value={(draft.maxSpendCents / 100).toFixed(2)}
-                onChange={(event) => setDraft({ ...draft, maxSpendCents: Math.round(Number(event.target.value || 0) * 100) })}
-              />
-            </div>
-          </div>
-          <div className="field" style={{ marginTop: 12 }}>
-            <label htmlFor="runs">Runs per launch</label>
-            <input
-              id="runs"
-              type="number"
-              min={1}
-              value={draft.runsPerLaunch}
-              onChange={(event) => setDraft({ ...draft, runsPerLaunch: Number(event.target.value) })}
+            </label>
+            <TextField
+              id="spend"
+              label="Maximum spend (USD)"
+              value={(draft.maxSpendCents / 100).toFixed(2)}
+              onChange={(value) => setDraft({ ...draft, maxSpendCents: Math.round(Number(value || 0) * 100) })}
             />
-          </div>
-        </section>
+            <TextField
+              id="runs"
+              label="Runs per launch"
+              type="number"
+              value={String(draft.runsPerLaunch)}
+              onChange={(value) => setDraft({ ...draft, runsPerLaunch: Number(value) })}
+            />
+          </CardContent>
+        </Card>
+        </FormShell>
       </form>
     </Page>
   );

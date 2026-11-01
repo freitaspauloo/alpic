@@ -1,7 +1,24 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { money, useStore, type RunStatus } from "../store";
-import { Page, Status } from "../ui";
+import type { TableColumn } from "@/components/motion/table";
+import { money, useStore, type Run, type RunStatus } from "../store";
+import { Checkbox } from "@/components/motion/checkbox";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  FormShell,
+  InlineAlert,
+  MenuButton,
+  nativeSelectClassName,
+  Page,
+  SimpleDataTable,
+  Status,
+  TextAreaField,
+} from "../ui";
 
 const outcomes: Array<RunStatus | "Any outcome"> = ["Any outcome", "Passed", "Failed", "Running", "Judging", "Canceled"];
 
@@ -22,37 +39,94 @@ export function Runs() {
     return true;
   });
 
+  const columns = useMemo((): TableColumn<Run>[] => {
+    return [
+      {
+        key: "run",
+        header: "Run",
+        sortable: true,
+        sortValue: (run) => run.scenario ?? run.prompt,
+        cell: (run) => {
+          const parent = experiments.find((item) => item.id === run.experimentId);
+          return (
+            <div className="min-w-0">
+              <Link className="font-medium text-foreground hover:underline" to={`/${org}/runs/${run.id}`}>
+                {run.scenario ?? run.prompt.slice(0, 48)}
+              </Link>
+              <div className="text-xs text-muted-foreground">{parent?.name ?? "One-off"}</div>
+            </div>
+          );
+        },
+      },
+      {
+        key: "status",
+        header: "Status",
+        cell: (run) => <Status status={run.status} />,
+      },
+      {
+        key: "variant",
+        header: "Variant",
+        cell: (run) => (
+          <div className="text-muted-foreground">
+            {run.agent}
+            <div className="text-xs text-muted-foreground/80">{run.model}</div>
+          </div>
+        ),
+      },
+      {
+        key: "cost",
+        header: "Cost",
+        align: "right",
+        sortable: true,
+        sortValue: (run) => run.costCents,
+        cell: (run) => <span className="tabular-nums">{money(run.costCents)}</span>,
+      },
+      {
+        key: "duration",
+        header: "Duration",
+        align: "right",
+        cell: (run) => <span className="tabular-nums text-muted-foreground">{run.duration}</span>,
+      },
+      {
+        key: "started",
+        header: "Started",
+        cell: (run) => <span className="text-muted-foreground">{run.started}</span>,
+      },
+    ];
+  }, [experiments, org]);
+
   return (
     <Page
       title="Runs"
       description="Every agent attempt, from an experiment or on its own."
-      action={
-        <Link className="btn btn-primary" to={`/${org}/runs/new`}>
-          New run
-        </Link>
-      }
+      action={<ButtonLink to={`/${org}/runs/new`}>New run</ButtonLink>}
     >
-      <div className="filters">
-        <label className="field" style={{ width: 180 }}>
-          <span className="hint">Outcome</span>
-          <select className="select" aria-label="Outcome" value={outcome} onChange={(event) => setOutcome(event.target.value as (typeof outcomes)[number])}>
+      <div className="mb-3 flex flex-wrap gap-3">
+        <label className="grid w-44 gap-1">
+          <span className="text-xs text-muted-foreground">Outcome</span>
+          <select
+            className={nativeSelectClassName}
+            aria-label="Outcome"
+            value={outcome}
+            onChange={(event) => setOutcome(event.target.value as (typeof outcomes)[number])}
+          >
             {outcomes.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
         </label>
-        <label className="field" style={{ width: 180 }}>
-          <span className="hint">Agent</span>
-          <select className="select" aria-label="Agent" value={agent} onChange={(event) => setAgent(event.target.value)}>
+        <label className="grid w-44 gap-1">
+          <span className="text-xs text-muted-foreground">Agent</span>
+          <select className={nativeSelectClassName} aria-label="Agent" value={agent} onChange={(event) => setAgent(event.target.value)}>
             <option>Any agent</option>
             {agents.map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
         </label>
-        <label className="field" style={{ width: 220 }}>
-          <span className="hint">Experiment</span>
-          <select className="select" aria-label="Experiment" value={experiment} onChange={(event) => setExperiment(event.target.value)}>
+        <label className="grid w-52 gap-1">
+          <span className="text-xs text-muted-foreground">Experiment</span>
+          <select className={nativeSelectClassName} aria-label="Experiment" value={experiment} onChange={(event) => setExperiment(event.target.value)}>
             <option value="Any experiment">Any experiment</option>
             <option value="One-off">Outside an experiment</option>
             {experiments.map((item) => (
@@ -64,49 +138,11 @@ export function Runs() {
         </label>
       </div>
       {runs.length === 0 ? (
-        <div className="card">
-          <p className="empty muted">No runs match these filters.</p>
-        </div>
+        <Card variant="outlined">
+          <CardContent className="py-10 text-center text-sm text-muted-foreground">No runs match these filters.</CardContent>
+        </Card>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Run</th>
-                <th>Status</th>
-                <th>Variant</th>
-                <th className="num">Cost</th>
-                <th className="num">Duration</th>
-                <th>Started</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runs.map((run) => {
-                const parent = experiments.find((item) => item.id === run.experimentId);
-                return (
-                  <tr key={run.id}>
-                    <td>
-                      <Link className="rowlink" to={`/${org}/runs/${run.id}`}>
-                        {run.scenario ?? run.prompt.slice(0, 48)}
-                      </Link>
-                      <div className="subtle">{parent?.name ?? "One-off"}</div>
-                    </td>
-                    <td>
-                      <Status status={run.status} />
-                    </td>
-                    <td className="muted">
-                      {run.agent}
-                      <div className="subtle">{run.model}</div>
-                    </td>
-                    <td className="num">{money(run.costCents)}</td>
-                    <td className="num">{run.duration}</td>
-                    <td className="muted">{run.started}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <SimpleDataTable data={runs} columns={columns} getRowId={(run) => run.id} emptyState="No runs" />
       )}
     </Page>
   );
@@ -120,7 +156,7 @@ export function RunDetail() {
   if (!run) {
     return (
       <Page title="Run">
-        <p className="muted">This run no longer exists.</p>
+        <p className="text-muted-foreground">This run no longer exists.</p>
       </Page>
     );
   }
@@ -131,61 +167,58 @@ export function RunDetail() {
       description={experiment ? experiment.name : "Outside any experiment. Nothing judges it."}
       action={<Status status={run.status} />}
     >
-      <div className="grid-2">
-        <section className="card card-pad">
-          <h2>Prompt</h2>
-          <p className="prompt">{run.prompt}</p>
-        </section>
-        <section className="card card-pad">
-          <h2>Evidence</h2>
-          <p className="prompt">{run.evidence}</p>
-        </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card variant="outlined">
+          <CardHeader>
+            <CardTitle as="h2">Prompt</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{run.prompt}</p>
+          </CardContent>
+        </Card>
+        <Card variant="outlined">
+          <CardHeader>
+            <CardTitle as="h2">Evidence</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{run.evidence}</p>
+          </CardContent>
+        </Card>
       </div>
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="meta-row">
-          <div>
-            <span>Agent</span>
-            <strong>{run.agent}</strong>
+      <Card variant="outlined" className="mt-4">
+        <CardContent className="grid gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-4">
+          {(
+            [
+              ["Agent", run.agent],
+              ["Harness", run.harness],
+              ["Model", run.model],
+              ["Repository", run.repository ?? "No repository"],
+              ["Cost", money(run.costCents)],
+              ["Duration", run.duration],
+              ["Started", run.started],
+            ] as const
+          ).map(([label, value]) => (
+            <div key={label} className="grid gap-1">
+              <span className="text-xs text-muted-foreground">{label}</span>
+              <strong className="text-sm">{value}</strong>
+            </div>
+          ))}
+          <div className="grid gap-1 sm:col-span-2">
+            <span className="text-xs text-muted-foreground">Run id</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <strong className="font-mono text-sm">{run.id}</strong>
+              <MenuButton
+                onClick={() => {
+                  void navigator.clipboard.writeText(run.id);
+                  setCopied(true);
+                }}
+              >
+                {copied ? "Run id copied." : "Copy run id"}
+              </MenuButton>
+            </div>
           </div>
-          <div>
-            <span>Harness</span>
-            <strong>{run.harness}</strong>
-          </div>
-          <div>
-            <span>Model</span>
-            <strong>{run.model}</strong>
-          </div>
-          <div>
-            <span>Repository</span>
-            <strong>{run.repository ?? "No repository"}</strong>
-          </div>
-          <div>
-            <span>Cost</span>
-            <strong>{money(run.costCents)}</strong>
-          </div>
-          <div>
-            <span>Duration</span>
-            <strong>{run.duration}</strong>
-          </div>
-          <div>
-            <span>Started</span>
-            <strong>{run.started}</strong>
-          </div>
-          <div>
-            <span>Run id</span>
-            <strong className="mono">{run.id}</strong>
-            <button
-              className="menu-btn"
-              onClick={() => {
-                void navigator.clipboard.writeText(run.id);
-                setCopied(true);
-              }}
-            >
-              {copied ? "Run id copied." : "Copy run id"}
-            </button>
-          </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </Page>
   );
 }
@@ -217,18 +250,15 @@ export function NewRun() {
   return (
     <Page title="New run" description="Give one agent one prompt, outside any experiment. Nothing judges it.">
       {broke ? (
-        <div className="alert" style={{ marginBottom: 16 }}>
-          <strong>Missing to start</strong>
-          Your balance is $0. Add funds to start a run. <Link to={`/${org}/billing`}>Add funds</Link>
-        </div>
+        <InlineAlert>
+          <strong>Missing to start</strong> Your balance is $0. Add funds to start a run.{" "}
+          <Link className="font-medium underline underline-offset-2" to={`/${org}/billing`}>
+            Add funds
+          </Link>
+        </InlineAlert>
       ) : null}
-      {error ? (
-        <div className="alert" style={{ marginBottom: 16 }}>
-          {error}
-        </div>
-      ) : null}
+      {error ? <InlineAlert variant="destructive">{error}</InlineAlert> : null}
       <form
-        className="form"
         onSubmit={(event) => {
           event.preventDefault();
           const repository = repos.find((item) => item.id === repositoryId);
@@ -250,73 +280,80 @@ export function NewRun() {
           navigate(`/${org}/runs/${result}`);
         }}
       >
-        <section className="card card-pad">
-          <h2>This run</h2>
-          <div className="field">
-            <label htmlFor="prompt">Prompt</label>
-            <textarea id="prompt" rows={5} required value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+        <FormShell className="max-w-3xl">
+          <Card variant="outlined">
+            <CardHeader>
+              <CardTitle as="h2">This run</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TextAreaField id="prompt" label="Prompt" rows={5} required value={prompt} onChange={setPrompt} />
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardHeader>
+              <CardTitle as="h2">Agent</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <label className="grid gap-1.5">
+                <span className="text-sm font-medium">Harness</span>
+                <select
+                  id="harness"
+                  className={nativeSelectClassName}
+                  value={harness}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setHarness(next);
+                    setAgent(next);
+                    setModel(models[next as "Claude" | "Codex"][0]);
+                  }}
+                >
+                  <option>Claude</option>
+                  <option>Codex</option>
+                </select>
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-sm font-medium">Model</span>
+                <select id="model" className={nativeSelectClassName} value={model} onChange={(event) => setModel(event.target.value)}>
+                  {models[harness as "Claude" | "Codex"].map((item) => (
+                    <option key={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1.5">
+                <span className="text-sm font-medium">Effort</span>
+                <select id="effort" className={nativeSelectClassName} value={effort} onChange={(event) => setEffort(event.target.value)}>
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                </select>
+              </label>
+              <Checkbox checked={fast} onCheckedChange={setFast} label="Fast mode" className="self-end pb-1" />
+            </CardContent>
+          </Card>
+          <Card variant="outlined">
+            <CardHeader>
+              <CardTitle as="h2">Repository and agent tools</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <label className="grid gap-1.5">
+                <span className="text-sm font-medium">Repository</span>
+                <select id="repository" className={nativeSelectClassName} value={repositoryId} onChange={(event) => setRepositoryId(event.target.value)}>
+                  <option value="">No repository: the run starts from an empty directory</option>
+                  {repos.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}@{item.ref}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </CardContent>
+          </Card>
+          <div className="flex justify-end pt-2">
+            <Button type="submit" disabled={broke || !prompt.trim()}>
+              Start run
+            </Button>
           </div>
-        </section>
-        <section className="card card-pad">
-          <h2>Agent</h2>
-          <div className="split two">
-            <div className="field">
-              <label htmlFor="harness">Harness</label>
-              <select
-                id="harness"
-                value={harness}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  setHarness(next);
-                  setAgent(next);
-                  setModel(models[next as "Claude" | "Codex"][0]);
-                }}
-              >
-                <option>Claude</option>
-                <option>Codex</option>
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="model">Model</label>
-              <select id="model" value={model} onChange={(event) => setModel(event.target.value)}>
-                {models[harness as "Claude" | "Codex"].map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="effort">Effort</label>
-              <select id="effort" value={effort} onChange={(event) => setEffort(event.target.value)}>
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-              </select>
-            </div>
-            <label className="field" style={{ alignContent: "end" }}>
-              <span>Fast mode</span>
-              <input type="checkbox" checked={fast} onChange={(event) => setFast(event.target.checked)} />
-            </label>
-          </div>
-        </section>
-        <section className="card card-pad">
-          <h2>Repository and agent tools</h2>
-          <div className="field">
-            <label htmlFor="repository">Repository</label>
-            <select id="repository" value={repositoryId} onChange={(event) => setRepositoryId(event.target.value)}>
-              <option value="">No repository: the run starts from an empty directory</option>
-              {repos.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}@{item.ref}
-                </option>
-              ))}
-            </select>
-          </div>
-        </section>
-        <div className="row-actions">
-          <button className="btn btn-primary" type="submit" disabled={broke || !prompt.trim()}>
-            Start run
-          </button>
-        </div>
+        </FormShell>
       </form>
     </Page>
   );

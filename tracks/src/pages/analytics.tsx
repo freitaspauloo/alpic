@@ -1,7 +1,22 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import type { TableColumn } from "@/components/motion/table";
 import { useStore, type TrafficSource } from "../store";
-import { Dialog, Page } from "../ui";
+import {
+  Button,
+  ButtonLink,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Dialog,
+  FormActions,
+  FormShell,
+  Page,
+  SimpleDataTable,
+  Status,
+  TextField,
+} from "../ui";
 
 const hours = [12, 18, 9, 22, 40, 28, 16, 33, 47, 21, 14, 19];
 
@@ -11,16 +26,28 @@ export function AnalyticsHome() {
   const tracked = sources.filter((source) => source.tracked);
   return (
     <Page title="Analytics" description="Who visits your website.">
-      <div className="grid-2">
-        <Link className="card card-pad" to={`/${org}/analytics/sources`} style={{ textDecoration: "none" }}>
-          <h2>Sources</h2>
-          <p className="lede">Connect Cloudflare or Vercel so page requests can be tracked.</p>
-          <p style={{ marginBottom: 0 }}>{tracked.length ? tracked.map((source) => source.provider).join(" and ") : "Nothing connected yet."}</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Link to={`/${org}/analytics/sources`} className="block no-underline">
+          <Card variant="outlined" interactive className="h-full transition-colors hover:bg-muted/40">
+            <CardHeader>
+              <CardTitle as="h2">Sources</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 text-sm text-muted-foreground">
+              <p>Connect Cloudflare or Vercel so page requests can be tracked.</p>
+              <p className="text-foreground">{tracked.length ? tracked.map((source) => source.provider).join(" and ") : "Nothing connected yet."}</p>
+            </CardContent>
+          </Card>
         </Link>
-        <Link className="card card-pad" to={`/${org}/analytics/traffic`} style={{ textDecoration: "none" }}>
-          <h2>Traffic</h2>
-          <p className="lede">Requests, visitors, and who looks like an agent.</p>
-          <p style={{ marginBottom: 0 }}>{tracked.length ? "Open the last 24 hours." : "Connect a source first."}</p>
+        <Link to={`/${org}/analytics/traffic`} className="block no-underline">
+          <Card variant="outlined" interactive className="h-full transition-colors hover:bg-muted/40">
+            <CardHeader>
+              <CardTitle as="h2">Traffic</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 text-sm text-muted-foreground">
+              <p>Requests, visitors, and who looks like an agent.</p>
+              <p className="text-foreground">{tracked.length ? "Open the last 24 hours." : "Connect a source first."}</p>
+            </CardContent>
+          </Card>
         </Link>
       </div>
     </Page>
@@ -37,44 +64,46 @@ export function Sources() {
     <Page
       title="Sources"
       description="We track one Vercel project, or one Cloudflare zone and all of its subdomains."
-      action={
-        <Link className="btn btn-secondary" to={`/${org}/analytics/traffic`}>
-          Back to Traffic
-        </Link>
-      }
+      action={<ButtonLink to={`/${org}/analytics/traffic`} variant="secondary">Back to Traffic</ButtonLink>}
     >
-      <div className="grid-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {sources.map((source) => (
-          <article key={source.provider} className="card card-pad">
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-              <h2>{source.provider}</h2>
-              {source.tracked ? <span className="badge pass">Tracked</span> : <span className="badge">Not connected</span>}
-            </div>
-            <p className="lede">
-              {source.provider === "Cloudflare"
-                ? "Connect your Cloudflare account to track page requests from a zone."
-                : "Connect your Vercel account to track page requests via log drains."}
-            </p>
-            {source.tracked ? <p>Tracking {source.target}.</p> : null}
-            <div className="row-actions">
+          <Card key={source.provider} variant="outlined">
+            <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
+              <CardTitle as="h2">{source.provider}</CardTitle>
               {source.tracked ? (
-                <button className="btn btn-secondary" onClick={() => store.disconnectSource(org, source.provider)}>
-                  Disconnect
-                </button>
+                <Status status="Passed" />
               ) : (
-                <button
-                  className="btn btn-primary"
-                  style={source.provider === "Cloudflare" ? { background: "#f38020" } : { background: "#171717" }}
-                  onClick={() => {
-                    setEditing(source);
-                    setTarget(source.provider === "Vercel" ? "acme-storefront" : "acme.com");
-                  }}
-                >
-                  Connect {source.provider}
-                </button>
+                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">Not connected</span>
               )}
-            </div>
-          </article>
+            </CardHeader>
+            <CardContent className="grid gap-3 text-sm">
+              <p className="text-muted-foreground">
+                {source.provider === "Cloudflare"
+                  ? "Connect your Cloudflare account to track page requests from a zone."
+                  : "Connect your Vercel account to track page requests via log drains."}
+              </p>
+              {source.tracked ? <p>Tracking {source.target}.</p> : null}
+              <div className="flex flex-wrap gap-2">
+                {source.tracked ? (
+                  <Button type="button" variant="secondary" onClick={() => store.disconnectSource(org, source.provider)}>
+                    Disconnect
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className={source.provider === "Cloudflare" ? "bg-[#f38020] hover:bg-[#f38020]/90" : "bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900"}
+                    onClick={() => {
+                      setEditing(source);
+                      setTarget(source.provider === "Vercel" ? "acme-storefront" : "acme.com");
+                    }}
+                  >
+                    Connect {source.provider}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
       {editing ? (
@@ -84,31 +113,31 @@ export function Sources() {
           onClose={() => setEditing(null)}
         >
           <form
-            className="form"
             onSubmit={(event) => {
               event.preventDefault();
               store.connectSource(org, editing.provider, target);
               setEditing(null);
             }}
           >
-            <div className="field">
-              <label htmlFor="target">{editing.provider === "Vercel" ? "Project" : "Zone"}</label>
-              <input id="target" value={target} onChange={(event) => setTarget(event.target.value)} required autoFocus />
-            </div>
-            <div className="dialog-actions">
-              <button className="btn btn-secondary" type="button" onClick={() => setEditing(null)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary" type="submit">
-                Track
-              </button>
-            </div>
+            <FormShell>
+              <TextField
+                id="target"
+                label={editing.provider === "Vercel" ? "Project" : "Zone"}
+                value={target}
+                onChange={setTarget}
+                required
+                autoFocus
+              />
+              <FormActions onCancel={() => setEditing(null)} submitLabel="Track" />
+            </FormShell>
           </form>
         </Dialog>
       ) : null}
     </Page>
   );
 }
+
+type TrafficRow = { visitor: string; path: string; status: string; at: string };
 
 export function Traffic() {
   const { org = "" } = useParams();
@@ -117,7 +146,7 @@ export function Traffic() {
     return <Navigate to={`/${org}/analytics/sources`} replace />;
   }
   const max = Math.max(...hours);
-  const rows = [
+  const rows: TrafficRow[] = [
     { visitor: "Agent", path: "/pricing", status: "200", at: "19:41 UTC" },
     { visitor: "Human", path: "/checkout", status: "200", at: "19:38 UTC" },
     { visitor: "Bot", path: "/robots.txt", status: "200", at: "19:22 UTC" },
@@ -125,49 +154,43 @@ export function Traffic() {
     { visitor: "Crawler", path: "/blog", status: "304", at: "18:54 UTC" },
     { visitor: "Unknown", path: "/api/health", status: "200", at: "18:40 UTC" },
   ];
+
+  const columns = useMemo((): TableColumn<TrafficRow>[] => {
+    return [
+      { key: "visitor", header: "Visitor", cell: (row) => row.visitor },
+      { key: "path", header: "Request", cell: (row) => <span className="font-mono text-xs">{row.path}</span> },
+      { key: "status", header: "Status", cell: (row) => row.status },
+      { key: "at", header: "Received", cell: (row) => <span className="text-muted-foreground">{row.at}</span> },
+    ];
+  }, []);
+
   return (
     <Page
       title="Traffic"
       description="Requests from the last 24 hours. Expand a request to inspect its details and headers."
-      action={
-        <Link className="btn btn-secondary" to={`/${org}/analytics/sources`}>
-          Sources
-        </Link>
-      }
+      action={<ButtonLink to={`/${org}/analytics/sources`} variant="secondary">Sources</ButtonLink>}
     >
-      <section className="card card-pad">
-        <h2>UTC hour</h2>
-        <div className="bars" aria-label="Requests by hour">
+      <Card variant="outlined">
+        <CardHeader>
+          <CardTitle as="h2">UTC hour</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2" aria-label="Requests by hour">
           {hours.map((value, index) => (
-            <div className="bar" key={index}>
-              <span className="subtle">{String(index * 2).padStart(2, "0")}:00</span>
-              <i style={{ width: `${(value / max) * 100}%`, background: index % 3 === 0 ? "var(--primary)" : "#0b6e75" }} />
-              <span className="mono">{value}</span>
+            <div className="grid grid-cols-[3rem_1fr_2rem] items-center gap-2 text-xs" key={index}>
+              <span className="text-muted-foreground">{String(index * 2).padStart(2, "0")}:00</span>
+              <div className="h-2 rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${(value / max) * 100}%`, background: index % 3 === 0 ? "var(--primary)" : "#0b6e75" }}
+                />
+              </div>
+              <span className="font-mono tabular-nums">{value}</span>
             </div>
           ))}
-        </div>
-      </section>
-      <div className="table-wrap" style={{ marginTop: 16 }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Visitor</th>
-              <th>Request</th>
-              <th>Status</th>
-              <th>Received</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.path + row.at}>
-                <td>{row.visitor}</td>
-                <td className="mono">{row.path}</td>
-                <td>{row.status}</td>
-                <td className="muted">{row.at}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        </CardContent>
+      </Card>
+      <div className="mt-4">
+        <SimpleDataTable data={rows} columns={columns} getRowId={(row) => `${row.path}-${row.at}`} />
       </div>
     </Page>
   );

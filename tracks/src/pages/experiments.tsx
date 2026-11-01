@@ -1,7 +1,20 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { passRate, useStore, type Scenario } from "../store";
-import { Dialog, Empty, Page, Status } from "../ui";
+import type { TableColumn } from "@/components/motion/table";
+import { passRate, useStore, type Experiment, type Scenario } from "../store";
+import {
+  Button,
+  ChipToggle,
+  Dialog,
+  Empty,
+  FormActions,
+  FormShell,
+  MenuButton,
+  Page,
+  SimpleDataTable,
+  Status,
+  TextField,
+} from "../ui";
 
 const starters = [
   {
@@ -51,6 +64,63 @@ export function Experiments() {
     navigate(`/${org}/experiments/${id}/edit`);
   }
 
+  const columns = useMemo((): TableColumn<Experiment>[] => {
+    return [
+      {
+        key: "name",
+        header: "Name",
+        sortable: true,
+        sortValue: (row) => row.name,
+        cell: (experiment) => (
+          <Link className="font-medium text-foreground underline-offset-4 hover:underline" to={`/${org}/experiments/${experiment.id}`}>
+            {experiment.name}
+          </Link>
+        ),
+      },
+      {
+        key: "scenarios",
+        header: "Scenarios",
+        sortable: true,
+        align: "left",
+        sortValue: (row) => row.scenarios.length,
+        cell: (experiment) => (
+          <span className="text-muted-foreground">
+            {experiment.scenarios.length === 1 ? "1 scenario" : `${experiment.scenarios.length} scenarios`}
+          </span>
+        ),
+      },
+      {
+        key: "latest",
+        header: "Latest execution",
+        cell: (experiment) => {
+          const latest = store.executions.find((item) => item.experimentId === experiment.id);
+          if (!latest) return <span className="text-muted-foreground">Not launched yet</span>;
+          const runs = store.runs.filter((item) => item.executionId === latest.id);
+          const rate = passRate(runs);
+          return (
+            <span className="inline-flex items-center gap-2">
+              <Status status={latest.status} />
+              {rate !== null ? <span className="text-muted-foreground">{Math.round(rate * 100)}% pass</span> : null}
+            </span>
+          );
+        },
+      },
+      {
+        key: "actions",
+        header: "Actions",
+        align: "right",
+        width: "220px",
+        cell: (experiment) => (
+          <span className="inline-flex flex-wrap justify-end gap-1">
+            <MenuButton onClick={() => navigate(`/${org}/experiments/${experiment.id}/edit`)}>Edit</MenuButton>
+            <MenuButton onClick={() => store.duplicateExperiment(experiment.id)}>Duplicate</MenuButton>
+            <MenuButton onClick={() => setRemoveId(experiment.id)}>Remove</MenuButton>
+          </span>
+        ),
+      },
+    ];
+  }, [navigate, org, store]);
+
   function startFromDocument(event: FormEvent) {
     event.preventDefault();
     const host = website.trim() || "your-business.com";
@@ -71,154 +141,109 @@ export function Experiments() {
       description="Compare how agents perform your scenarios across variants."
       action={
         <>
-          <button className="btn btn-secondary" onClick={() => setFromDoc(true)}>
+          <Button type="button" variant="secondary" onClick={() => setFromDoc(true)}>
             From a document
-          </button>
-          <button className="btn btn-primary" onClick={() => setCreating(true)}>
+          </Button>
+          <Button type="button" onClick={() => setCreating(true)}>
             New experiment
-          </button>
+          </Button>
         </>
       }
     >
       {experiments.length === 0 ? (
-        <div className="card">
-          <Empty title="What would you like to test?">
-            <p>Start from a few questions about your website, or write the scenarios yourself.</p>
-            <div className="chips">
-              {starters.map((item) => (
-                <button key={item.label} className="chip" type="button" onClick={() => setFromDoc(true)}>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <div className="row-actions" style={{ marginTop: 16 }}>
-              <button className="btn btn-primary" onClick={() => setCreating(true)}>
-                Start from scratch
-              </button>
-            </div>
-          </Empty>
-        </div>
+        <Empty title="What would you like to test?">
+          <p>Start from a few questions about your website, or write the scenarios yourself.</p>
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
+            {starters.map((item) => (
+              <ChipToggle key={item.label} onClick={() => setFromDoc(true)}>
+                {item.label}
+              </ChipToggle>
+            ))}
+          </div>
+          <div className="pt-4">
+            <Button type="button" onClick={() => setCreating(true)}>
+              Start from scratch
+            </Button>
+          </div>
+        </Empty>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Scenarios</th>
-                <th>Latest execution</th>
-                <th className="num">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {experiments.map((experiment) => {
-                const latest = store.executions.find((item) => item.experimentId === experiment.id);
-                const runs = latest ? store.runs.filter((item) => item.executionId === latest.id) : [];
-                const rate = passRate(runs);
-                return (
-                  <tr key={experiment.id}>
-                    <td>
-                      <Link className="rowlink" to={`/${org}/experiments/${experiment.id}`}>
-                        {experiment.name}
-                      </Link>
-                    </td>
-                    <td className="muted">{experiment.scenarios.length === 1 ? "1 scenario" : `${experiment.scenarios.length} scenarios`}</td>
-                    <td>
-                      {!latest ? (
-                        <span className="muted">Not launched yet</span>
-                      ) : (
-                        <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                          <Status status={latest.status} />
-                          {rate !== null ? <span className="muted">{Math.round(rate * 100)}% pass</span> : null}
-                        </span>
-                      )}
-                    </td>
-                    <td className="num">
-                      <button className="menu-btn" onClick={() => navigate(`/${org}/experiments/${experiment.id}/edit`)}>
-                        Edit
-                      </button>
-                      <button className="menu-btn" onClick={() => store.duplicateExperiment(experiment.id)}>
-                        Duplicate
-                      </button>
-                      <button className="menu-btn" onClick={() => setRemoveId(experiment.id)}>
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <SimpleDataTable
+          data={experiments}
+          columns={columns}
+          getRowId={(row) => row.id}
+          defaultSort={{ key: "name", direction: "asc" }}
+          emptyState="No experiments yet"
+        />
       )}
 
       {creating ? (
         <Dialog title="New experiment" description="From scratch. You’ll add scenarios and agents next." onClose={() => setCreating(false)}>
-          <form className="form" onSubmit={startScratch}>
-            <div className="field">
-              <label htmlFor="exp-name">Name</label>
-              <input id="exp-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Untitled experiment" autoFocus />
-            </div>
-            <div className="dialog-actions">
-              <button className="btn btn-secondary" type="button" onClick={() => setCreating(false)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary" type="submit">
-                Create
-              </button>
-            </div>
+          <form onSubmit={startScratch}>
+            <FormShell>
+              <TextField
+                id="exp-name"
+                label="Name"
+                value={name}
+                onChange={setName}
+                placeholder="Untitled experiment"
+                autoFocus
+                required
+              />
+              <FormActions onCancel={() => setCreating(false)} submitLabel="Create" />
+            </FormShell>
           </form>
         </Dialog>
       ) : null}
 
       {fromDoc ? (
         <Dialog title="Import scenarios from a document" description="Pick the questions to ask about a website. Tracks writes one scenario for each." onClose={() => setFromDoc(false)} wide>
-          <form className="form" onSubmit={startFromDocument}>
-            <div className="field">
-              <label htmlFor="website">Website</label>
-              <input id="website" value={website} placeholder="your-business.com" onChange={(event) => setWebsite(event.target.value)} autoFocus />
-            </div>
-            <div className="chips" style={{ justifyContent: "flex-start" }}>
-              {starters.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  className="chip"
-                  aria-pressed={picked.includes(item.label)}
-                  onClick={() =>
-                    setPicked((current) => (current.includes(item.label) ? current.filter((label) => label !== item.label) : [...current, item.label]))
-                  }
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <div className="dialog-actions">
-              <button className="btn btn-secondary" type="button" onClick={() => setFromDoc(false)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary" type="submit" disabled={!picked.length}>
-                Create experiment
-              </button>
-            </div>
+          <form onSubmit={startFromDocument}>
+            <FormShell>
+              <TextField
+                id="website"
+                label="Website"
+                value={website}
+                onChange={setWebsite}
+                placeholder="your-business.com"
+                autoFocus
+              />
+              <div className="flex flex-wrap gap-2">
+                {starters.map((item) => (
+                  <ChipToggle
+                    key={item.label}
+                    pressed={picked.includes(item.label)}
+                    onClick={() =>
+                      setPicked((current) =>
+                        current.includes(item.label) ? current.filter((label) => label !== item.label) : [...current, item.label],
+                      )
+                    }
+                  >
+                    {item.label}
+                  </ChipToggle>
+                ))}
+              </div>
+              <FormActions onCancel={() => setFromDoc(false)} submitLabel="Create experiment" submitDisabled={!picked.length} />
+            </FormShell>
           </form>
         </Dialog>
       ) : null}
 
       {removing ? (
         <Dialog title={`Remove ${removing.name}?`} description="Its scenarios and settings are lost, and its executions are no longer shown." onClose={() => setRemoveId(null)}>
-          <div className="dialog-actions">
-            <button className="btn btn-secondary" onClick={() => setRemoveId(null)}>
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setRemoveId(null)}>
               Cancel
-            </button>
-            <button
-              className="btn btn-danger"
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
               onClick={() => {
                 store.removeExperiment(removing.id);
                 setRemoveId(null);
               }}
             >
               Remove
-            </button>
+            </Button>
           </div>
         </Dialog>
       ) : null}

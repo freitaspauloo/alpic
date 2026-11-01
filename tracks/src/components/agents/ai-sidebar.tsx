@@ -91,7 +91,7 @@ export interface AISidebarProps {
   renderMenu?: (
     item: SidebarResource,
     controls: SidebarResourceMenuControls,
-  ) => ReactNode;
+  ) => ReactNode | null;
   ariaLabel?: string;
   className?: string;
 }
@@ -403,46 +403,53 @@ function ResourceRow({
     action();
   };
 
-  const menu = renderMenu?.(row.item, {
+  const menuControls = {
     close: () => onMenuOpenChange(false),
     rename: () => {
       onMenuOpenChange(false);
       onRenameStart();
     },
     moves,
-  }) ?? (
-    <>
-      <ResourceMenuAction icon={Pencil} onSelect={runFromMenu(onRenameStart)}>
-        Rename
-      </ResourceMenuAction>
-      {moves.up || moves.down || moves.into || moves.out ? (
-        <div aria-hidden="true" className="my-1 h-px bg-border" />
-      ) : null}
-      {moves.up ? (
-        <ResourceMenuAction icon={ArrowUp} onSelect={runFromMenu(moves.up)}>
-          Move up
+  };
+
+  const menu =
+    renderMenu !== undefined ? (
+      renderMenu(row.item, menuControls)
+    ) : (
+      <>
+        <ResourceMenuAction icon={Pencil} onSelect={runFromMenu(onRenameStart)}>
+          Rename
         </ResourceMenuAction>
-      ) : null}
-      {moves.down ? (
-        <ResourceMenuAction icon={ArrowDown} onSelect={runFromMenu(moves.down)}>
-          Move down
-        </ResourceMenuAction>
-      ) : null}
-      {moves.into ? (
-        <ResourceMenuAction
-          icon={FolderInput}
-          onSelect={runFromMenu(moves.into.run)}
-        >
-          Move into {moves.into.label}
-        </ResourceMenuAction>
-      ) : null}
-      {moves.out ? (
-        <ResourceMenuAction icon={Undo2} onSelect={runFromMenu(moves.out)}>
-          Move out
-        </ResourceMenuAction>
-      ) : null}
-    </>
-  );
+        {moves.up || moves.down || moves.into || moves.out ? (
+          <div aria-hidden="true" className="my-1 h-px bg-border" />
+        ) : null}
+        {moves.up ? (
+          <ResourceMenuAction icon={ArrowUp} onSelect={runFromMenu(moves.up)}>
+            Move up
+          </ResourceMenuAction>
+        ) : null}
+        {moves.down ? (
+          <ResourceMenuAction icon={ArrowDown} onSelect={runFromMenu(moves.down)}>
+            Move down
+          </ResourceMenuAction>
+        ) : null}
+        {moves.into ? (
+          <ResourceMenuAction
+            icon={FolderInput}
+            onSelect={runFromMenu(moves.into.run)}
+          >
+            Move into {moves.into.label}
+          </ResourceMenuAction>
+        ) : null}
+        {moves.out ? (
+          <ResourceMenuAction icon={Undo2} onSelect={runFromMenu(moves.out)}>
+            Move out
+          </ResourceMenuAction>
+        ) : null}
+      </>
+    );
+
+  const showRowMenu = menu != null;
 
   return (
     <motion.div
@@ -538,7 +545,7 @@ function ResourceRow({
         <MarqueeLabel active={hovered || menuOpen}>{row.item.label}</MarqueeLabel>
       )}
 
-      {!renaming && !row.item.disabled ? (
+      {showRowMenu && !renaming && !row.item.disabled ? (
         <MorphPopover
           open={menuOpen}
           onOpenChange={onMenuOpenChange}

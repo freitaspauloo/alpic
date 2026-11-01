@@ -1,0 +1,44 @@
+---
+description: Tracks app UI must come from the beUI design system (beui.dev)
+globs: tracks/**/*
+alwaysApply: false
+---
+
+# Tracks · beUI design system
+
+[beUI](https://beui.dev) is the source of truth for Tracks UI: layout chrome, forms, tables, feedback, and motion.
+
+## Install (never hand-roll equivalents)
+
+- Registry: `@beui` in `tracks/components.json` → `https://beui.dev/r/{name}.json`
+- CLI: from `tracks/`, run `npx shadcn@latest add @beui/<slug> --yes`
+- Docs for agents: [AI Agents guide](https://beui.dev/docs/ai-agents), registry index `https://beui.dev/r`, catalogue `https://beui.dev/llms.txt`
+- Optional MCP: `https://mcp.beui.dev/mcp` (`list_components`, `search_components`, `get_component`, `get_install_command`)
+
+## Where code lives
+
+| Kind | Path |
+|------|------|
+| App shell / navigation | `src/components/motion/` (e.g. `animated-sidebar`, `popover-morph`) |
+| Agents / resource tree | `src/components/agents/` (e.g. `ai-sidebar`) |
+| beUI primitives | `src/components/motion/<slug>/` or `src/components/ui/` (shadcn install target) |
+| App wrappers | `src/components/app/` — `Page`, `Dialog`, `FormShell`, `SimpleDataTable`, `InlineAlert`, `ShellMenu` |
+| Page imports | `src/ui.tsx` re-exports `@/components/app` + legacy `Logo` / `Icon` |
+
+Components copied from beUI keep the `// beui.dev/components/...` header. Customize Tracks branding via **theme tokens** in `src/styles.css` (shadcn semantic variables: `--background`, `--primary`, `--muted`, etc.), not one-off colors in components.
+
+## Page rules
+
+1. **Tables** — use `@/components/motion/table` (`Table`, `TableColumn`). No raw `<table className="table-wrap">` in new or touched pages.
+2. **Buttons** — use `@/components/motion/button` or `@/components/ui/button` (shadcn/beUI), not `.btn` / `.btn-primary` CSS classes.
+3. **Forms** — use beUI `Input`, `Select`, `Checkbox`, etc. from the registry when touching a form.
+4. **Surfaces** — use beUI `Card` for grouped content instead of bespoke `.card` when refactoring.
+5. **Dialogs** — use app `Dialog` (CenterMorphModal). Menus in shell use `ShellMenu` (MorphPopover).
+
+Do not add new usages of legacy CSS (`.btn`, `.table-wrap`, `.card`, `.org-btn`, `.menu`) in `styles.css`.
+
+## Theming
+
+- Spec: `tracks/DESIGN_SYSTEM.md`. That file is the prime base: beUI color, type, radius, motion, and catalogue.
+- Tailwind v4 + `shadcn/tailwind.css` in `src/styles.css`
+- Theme through the semantic tokens in that spec (`--primary` is `#0285f7`, surfaces are the neutral scale, text buttons are pills). Do not add a parallel pink/teal skin or new one-off color variables.

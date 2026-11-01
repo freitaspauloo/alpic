@@ -21,9 +21,8 @@ export type PortalLayout = {
 };
 
 function sameLayout(a: PortalLayout | null, b: PortalLayout) {
-  if (!a) return false;
   return (
-    a.trigger.left === b.trigger.left &&
+    a?.trigger.left === b.trigger.left &&
     a.trigger.top === b.trigger.top &&
     a.trigger.width === b.trigger.width &&
     a.trigger.height === b.trigger.height &&

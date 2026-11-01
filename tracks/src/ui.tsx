@@ -1,5 +1,35 @@
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+
+export {
+  Button,
+  ButtonLink,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  ChipToggle,
+  CtaButtonLink,
+  Dialog,
+  Empty,
+  FormActions,
+  FormShell,
+  InlineAlert,
+  MenuButton,
+  ShellMenu,
+  ShellMenuItem,
+  ShellMenuLabel,
+  shellMenuTriggerClassName,
+  nativeSelectClassName,
+  Page,
+  SimpleDataTable,
+  Status,
+  TextAreaField,
+  TextField,
+  buttonVariants,
+} from "@/components/app";
 
 export function Logo({ to }: { to?: string }) {
   const mark = (
@@ -48,86 +78,5 @@ export function Icon({ name }: { name: string }) {
         <path key={d} d={d} />
       ))}
     </svg>
-  );
-}
-
-export function Page({
-  title,
-  description,
-  action,
-  children,
-}: {
-  title: string;
-  description?: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>{title}</h1>
-          {description ? <p className="lede">{description}</p> : null}
-        </div>
-        {action ? <div className="row-actions">{action}</div> : null}
-      </header>
-      {children}
-    </div>
-  );
-}
-
-export function Dialog({
-  title,
-  description,
-  onClose,
-  children,
-  wide,
-}: {
-  title: string;
-  description?: string;
-  onClose: () => void;
-  children: ReactNode;
-  wide?: boolean;
-}) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div className="backdrop" onMouseDown={onClose}>
-      <div
-        className={wide ? "dialog wide" : "dialog"}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dialog-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <h2 id="dialog-title">{title}</h2>
-        {description ? <p>{description}</p> : null}
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export function Status({ status }: { status: string }) {
-  const kind = status === "Passed" || status === "Judged" ? "pass" : status === "Failed" || status === "Canceled" ? "fail" : status === "Running" || status === "Judging" ? "run" : "";
-  return (
-    <span className={`badge ${kind}`}>
-      <i className="dot" />
-      {status}
-    </span>
-  );
-}
-
-export function Empty({ title, children }: { title: string; children?: ReactNode }) {
-  return (
-    <div className="empty">
-      <h2>{title}</h2>
-      {children}
-    </div>
   );
 }

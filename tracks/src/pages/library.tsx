@@ -1,7 +1,21 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
+import type { TableColumn } from "@/components/motion/table";
 import { useStore, type McpServer } from "../store";
-import { Dialog, Empty, Page, Status } from "../ui";
+import {
+  Button,
+  Dialog,
+  Empty,
+  FormActions,
+  FormShell,
+  MenuButton,
+  nativeSelectClassName,
+  Page,
+  SimpleDataTable,
+  Status,
+  TextAreaField,
+  TextField,
+} from "../ui";
 
 export function Repositories() {
   const { org = "" } = useParams();
@@ -16,17 +30,15 @@ export function Repositories() {
       title="Repositories"
       description="Start your variants' runs from codebases representative of your users."
       action={
-        <button className="btn btn-primary" onClick={() => setOpen(true)}>
+        <Button type="button" onClick={() => setOpen(true)}>
           Add repository
-        </button>
+        </Button>
       }
     >
       {rows.length === 0 ? (
-        <div className="card">
-          <Empty title="Add your first repository">
-            <p>Start your variants' runs from codebases representative of your users.</p>
-          </Empty>
-        </div>
+        <Empty title="Add your first repository">
+          <p>Start your variants' runs from codebases representative of your users.</p>
+        </Empty>
       ) : (
         <LibraryTable
           headers={["Name", "URL", "Ref", ""]}
@@ -34,16 +46,15 @@ export function Repositories() {
             row.name,
             row.url,
             row.ref,
-            <button key="remove" className="menu-btn" onClick={() => store.removeRepository(row.id)}>
+            <MenuButton key="remove" onClick={() => store.removeRepository(row.id)}>
               Remove
-            </button>,
+            </MenuButton>,
           ])}
         />
       )}
       {open ? (
         <Dialog title="Add repository" description="Enter a public GitHub repository URL, like https://github.com/acme/app" onClose={() => setOpen(false)}>
           <form
-            className="form"
             onSubmit={(event) => {
               event.preventDefault();
               store.addRepository(org, { name: name || url.replace("https://github.com/", ""), url, ref: refName });
@@ -52,19 +63,12 @@ export function Repositories() {
               setUrl("");
             }}
           >
-            <div className="field">
-              <label htmlFor="repo-name">Name</label>
-              <input id="repo-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="acme/app" required />
-            </div>
-            <div className="field">
-              <label htmlFor="repo-url">URL</label>
-              <input id="repo-url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://github.com/acme/app" required />
-            </div>
-            <div className="field">
-              <label htmlFor="repo-ref">Ref</label>
-              <input id="repo-ref" value={refName} onChange={(event) => setRefName(event.target.value)} placeholder="main" required />
-            </div>
-            <DialogActions onClose={() => setOpen(false)} label="Add repository" />
+            <FormShell>
+              <TextField id="repo-name" label="Name" value={name} onChange={setName} placeholder="acme/app" required />
+              <TextField id="repo-url" label="URL" value={url} onChange={setUrl} placeholder="https://github.com/acme/app" required />
+              <TextField id="repo-ref" label="Ref" value={refName} onChange={setRefName} placeholder="main" required />
+              <FormActions onCancel={() => setOpen(false)} submitLabel="Add repository" />
+            </FormShell>
           </form>
         </Dialog>
       ) : null}
@@ -86,37 +90,34 @@ export function Skills() {
       title="Skills"
       description="Give the agent instructions on how to interact with your product."
       action={
-        <button className="btn btn-primary" onClick={() => setOpen(true)}>
+        <Button type="button" onClick={() => setOpen(true)}>
           Add skill
-        </button>
+        </Button>
       }
     >
       {rows.length === 0 ? (
-        <div className="card">
-          <Empty title="Add your first skill">
-            <p>Give the agent instructions on how to interact with your product.</p>
-          </Empty>
-        </div>
+        <Empty title="Add your first skill">
+          <p>Give the agent instructions on how to interact with your product.</p>
+        </Empty>
       ) : (
         <LibraryTable
           headers={["Name", "Description", "Source", "Files", ""]}
           rows={rows.map((row) => [
-            <button key="name" className="menu-btn" style={{ fontWeight: 600, color: "var(--fg)" }} onClick={() => setView(row.id)}>
+            <MenuButton key="name" className="font-semibold text-foreground" onClick={() => setView(row.id)}>
               {row.name}
-            </button>,
+            </MenuButton>,
             row.description,
             row.source,
             String(row.files),
-            <button key="remove" className="menu-btn" onClick={() => store.removeSkill(row.id)}>
+            <MenuButton key="remove" onClick={() => store.removeSkill(row.id)}>
               Remove
-            </button>,
+            </MenuButton>,
           ])}
         />
       )}
       {open ? (
         <Dialog title="Add skill" description="Uploaded as SKILL.md. You can refresh a GitHub skill later." onClose={() => setOpen(false)}>
           <form
-            className="form"
             onSubmit={(event) => {
               event.preventDefault();
               store.addSkill(org, { name, description });
@@ -125,28 +126,24 @@ export function Skills() {
               setDescription("");
             }}
           >
-            <div className="field">
-              <label htmlFor="skill-name">Name</label>
-              <input id="skill-name" required value={name} onChange={(event) => setName(event.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="skill-desc">Description</label>
-              <textarea id="skill-desc" required rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
-            </div>
-            <DialogActions onClose={() => setOpen(false)} label="Add skill" />
+            <FormShell>
+              <TextField id="skill-name" label="Name" value={name} onChange={setName} required />
+              <TextAreaField id="skill-desc" label="Description" value={description} onChange={setDescription} required rows={3} />
+              <FormActions onCancel={() => setOpen(false)} submitLabel="Add skill" />
+            </FormShell>
           </form>
         </Dialog>
       ) : null}
       {skill ? (
         <Dialog title={skill.name} description={skill.description} onClose={() => setView(null)}>
-          <div className="subtle" style={{ marginBottom: 8 }}>
+          <p className="mb-2 text-sm text-muted-foreground">
             {skill.source} · {skill.files} files
-          </div>
-          <pre className="prompt">{`# ${skill.name}\n\n${skill.description}\n`}</pre>
-          <div className="dialog-actions">
-            <button className="btn btn-secondary" onClick={() => setView(null)}>
+          </p>
+          <pre className="max-h-64 overflow-auto rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">{`# ${skill.name}\n\n${skill.description}\n`}</pre>
+          <div className="flex justify-end pt-4">
+            <Button type="button" variant="secondary" onClick={() => setView(null)}>
               Close
-            </button>
+            </Button>
           </div>
         </Dialog>
       ) : null}
@@ -167,17 +164,15 @@ export function McpServers() {
       title="MCP servers"
       description="Give the agent access to your MCP server."
       action={
-        <button className="btn btn-primary" onClick={() => setOpen(true)}>
+        <Button type="button" onClick={() => setOpen(true)}>
           Add MCP server
-        </button>
+        </Button>
       }
     >
       {rows.length === 0 ? (
-        <div className="card">
-          <Empty title="Add your first MCP server">
-            <p>Give the agent access to your MCP server.</p>
-          </Empty>
-        </div>
+        <Empty title="Add your first MCP server">
+          <p>Give the agent access to your MCP server.</p>
+        </Empty>
       ) : (
         <LibraryTable
           headers={["Name", "URL", "Authentication", "Connection", ""]}
@@ -185,20 +180,21 @@ export function McpServers() {
             row.name,
             row.url,
             row.auth,
-            <button key="conn" className="menu-btn" onClick={() => store.toggleMcp(row.id)}>
-              <Status status={row.connected ? "Passed" : "Failed"} />
-              <span style={{ marginLeft: 8 }}>{row.connected ? "Connected" : "Not connected"}</span>
-            </button>,
-            <button key="remove" className="menu-btn" onClick={() => store.removeMcp(row.id)}>
+            <MenuButton key="conn" onClick={() => store.toggleMcp(row.id)}>
+              <span className="inline-flex items-center gap-2">
+                <Status status={row.connected ? "Passed" : "Failed"} />
+                {row.connected ? "Connected" : "Not connected"}
+              </span>
+            </MenuButton>,
+            <MenuButton key="remove" onClick={() => store.removeMcp(row.id)}>
               Remove
-            </button>,
+            </MenuButton>,
           ])}
         />
       )}
       {open ? (
         <Dialog title="Add MCP server" description="An MCP server reached with a Bearer token needs one. A connection uses the organization." onClose={() => setOpen(false)}>
           <form
-            className="form"
             onSubmit={(event) => {
               event.preventDefault();
               store.addMcp(org, { name, url, auth });
@@ -207,23 +203,30 @@ export function McpServers() {
               setUrl("");
             }}
           >
-            <div className="field">
-              <label htmlFor="mcp-name">Name</label>
-              <input id="mcp-name" required value={name} onChange={(event) => setName(event.target.value)} />
-              <span className="hint">Use up to 64 letters, digits, - or _, with no spaces.</span>
-            </div>
-            <div className="field">
-              <label htmlFor="mcp-url">URL</label>
-              <input id="mcp-url" required type="url" placeholder="https://" value={url} onChange={(event) => setUrl(event.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="mcp-auth">Authentication</label>
-              <select id="mcp-auth" value={auth} onChange={(event) => setAuth(event.target.value as McpServer["auth"])}>
-                <option>Bearer token</option>
-                <option>Connection</option>
-              </select>
-            </div>
-            <DialogActions onClose={() => setOpen(false)} label="Add MCP server" />
+            <FormShell>
+              <TextField
+                id="mcp-name"
+                label="Name"
+                value={name}
+                onChange={setName}
+                required
+                hint="Use up to 64 letters, digits, - or _, with no spaces."
+              />
+              <TextField id="mcp-url" label="URL" type="url" value={url} onChange={setUrl} placeholder="https://" required />
+              <label className="grid gap-1.5">
+                <span className="text-sm font-medium">Authentication</span>
+                <select
+                  id="mcp-auth"
+                  className={nativeSelectClassName}
+                  value={auth}
+                  onChange={(event) => setAuth(event.target.value as McpServer["auth"])}
+                >
+                  <option>Bearer token</option>
+                  <option>Connection</option>
+                </select>
+              </label>
+              <FormActions onCancel={() => setOpen(false)} submitLabel="Add MCP server" />
+            </FormShell>
           </form>
         </Dialog>
       ) : null}
@@ -243,33 +246,30 @@ export function CommandLineTools() {
       title="Command-line tools"
       description="Install a program in your runs by adding it to the agent tools."
       action={
-        <button className="btn btn-primary" onClick={() => setOpen(true)}>
+        <Button type="button" onClick={() => setOpen(true)}>
           Add command-line tool
-        </button>
+        </Button>
       }
     >
       {rows.length === 0 ? (
-        <div className="card">
-          <Empty title="Add your first command-line tool">
-            <p>Install a program in your runs by adding it to the agent tools.</p>
-          </Empty>
-        </div>
+        <Empty title="Add your first command-line tool">
+          <p>Install a program in your runs by adding it to the agent tools.</p>
+        </Empty>
       ) : (
         <LibraryTable
           headers={["Name", "Install script", ""]}
           rows={rows.map((row) => [
             row.name,
-            <code key="script" className="mono">{row.script}</code>,
-            <button key="remove" className="menu-btn" onClick={() => store.removeTool(row.id)}>
+            <code key="script" className="font-mono text-xs">{row.script}</code>,
+            <MenuButton key="remove" onClick={() => store.removeTool(row.id)}>
               Remove
-            </button>,
+            </MenuButton>,
           ])}
         />
       )}
       {open ? (
         <Dialog title="Add command-line tool" description="The install script runs before the agent starts." onClose={() => setOpen(false)}>
           <form
-            className="form"
             onSubmit={(event) => {
               event.preventDefault();
               store.addTool(org, { name, script });
@@ -278,15 +278,11 @@ export function CommandLineTools() {
               setScript("");
             }}
           >
-            <div className="field">
-              <label htmlFor="tool-name">Name</label>
-              <input id="tool-name" required value={name} onChange={(event) => setName(event.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="tool-script">Install script</label>
-              <textarea id="tool-script" required rows={4} value={script} onChange={(event) => setScript(event.target.value)} />
-            </div>
-            <DialogActions onClose={() => setOpen(false)} label="Add command-line tool" />
+            <FormShell>
+              <TextField id="tool-name" label="Name" value={name} onChange={setName} required />
+              <TextAreaField id="tool-script" label="Install script" value={script} onChange={setScript} required rows={4} />
+              <FormActions onCancel={() => setOpen(false)} submitLabel="Add command-line tool" />
+            </FormShell>
           </form>
         </Dialog>
       ) : null}
@@ -295,43 +291,15 @@ export function CommandLineTools() {
 }
 
 function LibraryTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            {headers.map((header) => (
-              <th key={header || "actions"} className={header ? undefined : "num"}>
-                {header || "Actions"}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
-              {row.map((cell, cellIndex) => (
-                <td key={cellIndex} className={cellIndex === row.length - 1 ? "num" : undefined}>
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+  const data = useMemo(() => rows.map((cells, index) => ({ id: String(index), cells })), [rows]);
+  const columns = useMemo((): TableColumn<{ id: string; cells: ReactNode[] }>[] => {
+    return headers.map((header, index) => ({
+      key: `col-${index}`,
+      header: header || "Actions",
+      align: index === headers.length - 1 && !header ? "right" : "left",
+      cell: (row) => row.cells[index],
+    }));
+  }, [headers]);
 
-function DialogActions({ onClose, label }: { onClose: () => void; label: string }) {
-  return (
-    <div className="dialog-actions">
-      <button className="btn btn-secondary" type="button" onClick={onClose}>
-        Cancel
-      </button>
-      <button className="btn btn-primary" type="submit">
-        {label}
-      </button>
-    </div>
-  );
+  return <SimpleDataTable data={data} columns={columns} getRowId={(row) => row.id} />;
 }

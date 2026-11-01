@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { DesignWidget } from "./components/design-widget";
 import { Shell } from "./shell";
 import { Landing } from "./pages/landing";
 import { Experiments } from "./pages/experiments";
@@ -15,28 +16,31 @@ function AppShell({ children }: { children: ReactNode }) {
 
 export function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/invitations/:invitation" element={<Invitation />} />
-      <Route path="/:org/experiments" element={<AppShell><Experiments /></AppShell>} />
-      <Route path="/:org/experiments/:experimentId" element={<AppShell><ExperimentDetail /></AppShell>} />
-      <Route path="/:org/experiments/:experimentId/edit" element={<AppShell><ExperimentEdit /></AppShell>} />
-      <Route path="/:org/runs" element={<AppShell><Runs /></AppShell>} />
-      <Route path="/:org/runs/new" element={<AppShell><NewRun /></AppShell>} />
-      <Route path="/:org/runs/:runId" element={<AppShell><RunDetail /></AppShell>} />
-      <Route path="/:org/library" element={<Navigate to="repositories" replace />} />
-      <Route path="/:org/library/repositories" element={<AppShell><Repositories /></AppShell>} />
-      <Route path="/:org/library/skills" element={<AppShell><Skills /></AppShell>} />
-      <Route path="/:org/library/mcp-servers" element={<AppShell><McpServers /></AppShell>} />
-      <Route path="/:org/library/command-line-tools" element={<AppShell><CommandLineTools /></AppShell>} />
-      <Route path="/:org/analytics" element={<AppShell><AnalyticsHome /></AppShell>} />
-      <Route path="/:org/analytics/sources" element={<AppShell><Sources /></AppShell>} />
-      <Route path="/:org/analytics/traffic" element={<AppShell><Traffic /></AppShell>} />
-      <Route path="/:org/api-keys" element={<AppShell><ApiKeys /></AppShell>} />
-      <Route path="/:org/billing" element={<AppShell><Billing /></AppShell>} />
-      <Route path="/:org/members" element={<AppShell><Members /></AppShell>} />
-      <Route path="/:org/settings" element={<AppShell><Settings /></AppShell>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/invitations/:invitation" element={<Invitation />} />
+        <Route path="/:org/experiments" element={<AppShell><Experiments /></AppShell>} />
+        <Route path="/:org/experiments/:experimentId" element={<AppShell><ExperimentDetail /></AppShell>} />
+        <Route path="/:org/experiments/:experimentId/edit" element={<AppShell><ExperimentEdit /></AppShell>} />
+        <Route path="/:org/runs" element={<AppShell><Runs /></AppShell>} />
+        <Route path="/:org/runs/new" element={<AppShell><NewRun /></AppShell>} />
+        <Route path="/:org/runs/:runId" element={<AppShell><RunDetail /></AppShell>} />
+        <Route path="/:org/library" element={<Navigate to="repositories" replace />} />
+        <Route path="/:org/library/repositories" element={<AppShell><Repositories /></AppShell>} />
+        <Route path="/:org/library/skills" element={<AppShell><Skills /></AppShell>} />
+        <Route path="/:org/library/mcp-servers" element={<AppShell><McpServers /></AppShell>} />
+        <Route path="/:org/library/command-line-tools" element={<AppShell><CommandLineTools /></AppShell>} />
+        <Route path="/:org/analytics" element={<AppShell><AnalyticsHome /></AppShell>} />
+        <Route path="/:org/analytics/sources" element={<AppShell><Sources /></AppShell>} />
+        <Route path="/:org/analytics/traffic" element={<AppShell><Traffic /></AppShell>} />
+        <Route path="/:org/api-keys" element={<AppShell><ApiKeys /></AppShell>} />
+        <Route path="/:org/billing" element={<AppShell><Billing /></AppShell>} />
+        <Route path="/:org/members" element={<AppShell><Members /></AppShell>} />
+        <Route path="/:org/settings" element={<AppShell><Settings /></AppShell>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <DesignWidget />
+    </>
   );
 }
