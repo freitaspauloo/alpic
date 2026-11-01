@@ -47,14 +47,11 @@ const PANEL_TRANSITION = {
   ease: EASE_DRAWER,
 } as const;
 
-// The desktop rail settles at a hard zero-width boundary. Keep the spring
-// critically damped so it cannot overshoot, pause against that boundary, and
-// then snap back during the final frame.
-const SIDEBAR_MORPH_TRANSITION = {
-  type: "spring",
-  stiffness: 380,
-  damping: 35,
-  mass: 0.75,
+// Width eases out and stops. A spring climbs past the icon width, hits that
+// hard edge, and ticks back — the hitch at the end of an open or close.
+const SIDEBAR_WIDTH_TRANSITION = {
+  duration: 0.3,
+  ease: EASE_OUT,
 } as const;
 
 const LABEL_ENTER_TRANSITION = {
@@ -494,6 +491,10 @@ export interface AnimatedSidebarProps
   collapsible?: SidebarCollapsible;
   ariaLabel?: string;
   panelClassName?: string;
+  /** Live width while the rail is dragged. Skips the ease so the edge stays on the pointer. */
+  widthOverride?: number | null;
+  /** Icon chrome while a drag is between the rail and the full sidebar. */
+  collapsedOverride?: boolean;
 }
 
 export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
@@ -506,19 +507,23 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
       children,
       className,
       panelClassName,
+      widthOverride = null,
+      collapsedOverride,
       style,
       ...props
     },
     forwardedRef,
   ) {
     const context = useAnimatedSidebar();
-    const collapsed = collapsible !== "none" && !context.open;
-    const offcanvas = collapsed && collapsible === "offcanvas";
-    const width = offcanvas
+    const layoutCollapsed = collapsible !== "none" && !context.open;
+    const collapsed = collapsedOverride ?? layoutCollapsed;
+    const offcanvas = layoutCollapsed && collapsible === "offcanvas";
+    const restingWidth = offcanvas
       ? "0px"
-      : collapsed
+      : layoutCollapsed
         ? "var(--sidebar-width-icon)"
         : "var(--sidebar-width)";
+    const width = widthOverride ?? restingWidth;
 
     if (context.isMobile) {
       return (
@@ -539,13 +544,21 @@ export const AnimatedSidebar = forwardRef<HTMLElement, AnimatedSidebarProps>(
         initial={false}
         aria-label={ariaLabel}
         data-slot="sidebar"
-        data-state={collapsed ? "collapsed" : "expanded"}
+        data-state={
+          widthOverride != null
+            ? "expanded"
+            : layoutCollapsed
+              ? "collapsed"
+              : "expanded"
+        }
         data-collapsible={collapsible}
         data-variant={variant}
         data-side={side}
         animate={{ width }}
         transition={
-          context.reduce ? { duration: 0 } : SIDEBAR_MORPH_TRANSITION
+          context.reduce || widthOverride != null
+            ? { duration: 0 }
+            : SIDEBAR_WIDTH_TRANSITION
         }
         style={style}
         className={cn(

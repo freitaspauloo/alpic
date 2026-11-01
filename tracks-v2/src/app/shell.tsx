@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { animate } from "motion/react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Check,
@@ -33,6 +34,7 @@ import {
 } from "@/components/motion/animated-sidebar";
 import { Avatar } from "@/components/motion/avatar-group";
 import { DesignPlayground } from "@/design/playground";
+import { resolveNavIcon } from "@/design/icons";
 import { radiusSteps, useDesign } from "@/design/theme";
 import { Button } from "@/components/motion/button/base";
 import {
@@ -44,15 +46,10 @@ import { Input } from "@/components/motion/input";
 import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { initial, money, useCurrentOrg, useOrgData, useOrgId, usePendingInvitations, useStore, type Organization } from "@/data";
+import { EASE_OUT } from "@/lib/ease";
 import { cn } from "@/lib/utils";
 import { MenuAction, MenuLabel, MenuSeparator } from "./menu";
-import {
-  NAV_ICONS,
-  NAV_PATHS,
-  NAV_TREE,
-  RAIL_ITEMS,
-  activeNavId,
-} from "./nav";
+import { NAV_PATHS, NAV_TREE, RAIL_ITEMS, activeNavId } from "./nav";
 import { NotFoundPage } from "./not-found";
 
 const WIDTH_KEY = "tracks-v2:sidebar-width";
@@ -61,10 +58,17 @@ const ICON_WIDTH = 68;
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 420;
 const DEFAULT_WIDTH = 256;
-/** Widths below the minimum stick, then collapse once the pointer pushes past this. */
-const COLLAPSE_AT = 150;
-/** Pull the icon rail this far before it opens. */
-const PULL_OPEN = 40;
+/** Releasing narrower than this settles on the icon rail. Wider settles open. */
+const COMMIT_AT = Math.round((ICON_WIDTH + MIN_WIDTH) / 2);
+
+function widthReveal(px: number) {
+  return Math.min(1, Math.max(0, (px - ICON_WIDTH) / (MIN_WIDTH - ICON_WIDTH)));
+}
+
+/** Labels stay hidden against the icon rail and finish appearing short of the minimum width. */
+function chromeFade(reveal: number) {
+  return Math.min(1, Math.max(0, (reveal - 0.28) / 0.44));
+}
 
 function clampWidth(width: number) {
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(width)));
@@ -80,22 +84,25 @@ export function Shell() {
   const org = useCurrentOrg();
   const [open, setOpen] = useState(() => localStorage.getItem(OPEN_KEY) !== "false");
   const [width, setWidth] = useState(readWidth);
-  const asideRef = useRef<HTMLElement>(null);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const chrome = chromeFade(dragWidth == null ? (open ? 1 : 0) : widthReveal(dragWidth));
 
   const changeOpen = useCallback((next: boolean) => {
     setOpen(next);
     localStorage.setItem(OPEN_KEY, String(next));
   }, []);
 
-  const resize = useCallback((next: number) => {
-    setWidth(next);
-    // Motion can settle the aside on a resolved pixel width; keep it in step while dragging.
-    if (asideRef.current) asideRef.current.style.width = `${next}px`;
-  }, []);
-
-  const releaseWidth = useCallback(() => {
-    if (asideRef.current) asideRef.current.style.width = "";
-  }, []);
+  const commitDrag = useCallback(
+    (nextOpen: boolean, nextWidth: number) => {
+      setDragWidth(null);
+      if (nextOpen) {
+        setWidth(nextWidth);
+        localStorage.setItem(WIDTH_KEY, String(nextWidth));
+      }
+      changeOpen(nextOpen);
+    },
+    [changeOpen],
+  );
 
   if (!org) return <NotFoundPage />;
 
@@ -105,28 +112,25 @@ export function Shell() {
       onOpenChange={changeOpen}
       style={{ "--sidebar-width": `${width}px` } as CSSProperties}
     >
-      <AnimatedSidebar ref={asideRef} collapsible="icon" ariaLabel="Tracks">
-        <SidebarTop org={org} />
+      <AnimatedSidebar
+        collapsible="icon"
+        ariaLabel="Tracks"
+        widthOverride={dragWidth}
+        collapsedOverride={dragWidth != null ? chrome < 0.999 : undefined}
+      >
+        <SidebarTop org={org} chrome={chrome} />
         <AnimatedSidebarContent>
-          <SidebarNav />
+          <SidebarNav chrome={chrome} />
         </AnimatedSidebarContent>
         <AnimatedSidebarFooter>
-          <UserMenu />
+          <UserMenu chrome={chrome} />
         </AnimatedSidebarFooter>
         <ResizeRail
           width={width}
+          dragWidth={dragWidth}
           expanded={open}
-          onResize={resize}
-          onResizeEnd={(final) => localStorage.setItem(WIDTH_KEY, String(final))}
-          onCollapse={(restore) => {
-            setWidth(restore);
-            releaseWidth();
-            changeOpen(false);
-          }}
-          onExpand={(next) => {
-            resize(next);
-            changeOpen(true);
-          }}
+          onDragWidth={setDragWidth}
+          onCommit={commitDrag}
         />
       </AnimatedSidebar>
       <AnimatedSidebarInset>
@@ -140,34 +144,38 @@ export function Shell() {
   );
 }
 
-function useCollapsed() {
-  const { open, isMobile } = useAnimatedSidebar();
-  return !open && !isMobile;
-}
-
 /* ───────────────────────── Header: org switcher + collapse toggle ───────────────────────── */
 
 const ICON_BUTTON =
   "size-9 rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
-function SidebarTop({ org }: { org: Organization }) {
-  const collapsed = useCollapsed();
-  if (collapsed) {
-    return (
-      <AnimatedSidebarHeader className="items-center px-2 py-3">
-        <AnimatedSidebarTrigger aria-label="Expand sidebar" className={cn(ICON_BUTTON, "h-9 w-full")}>
+function SidebarTop({ org, chrome }: { org: Organization; chrome: number }) {
+  return (
+    <div className="grid w-full min-w-0 shrink-0">
+      <AnimatedSidebarHeader
+        style={{ opacity: 1 - chrome }}
+        inert={chrome >= 0.5}
+        className={cn("col-start-1 row-start-1 min-w-0 px-3 py-3", chrome > 0.98 && "hidden")}
+      >
+        {/* Glyph sits on the same column as the nav icons, so it stays put while the rail moves. */}
+        <AnimatedSidebarTrigger aria-label="Expand sidebar" className={cn(ICON_BUTTON, "ml-1 self-start")}>
           <PanelLeftOpen aria-hidden="true" className="size-5" />
         </AnimatedSidebarTrigger>
       </AnimatedSidebarHeader>
-    );
-  }
-  return (
-    <AnimatedSidebarHeader className="flex-row items-center gap-1">
-      <OrgSwitcher org={org} />
-      <AnimatedSidebarClose aria-label="Collapse sidebar" className={ICON_BUTTON}>
-        <PanelLeftClose aria-hidden="true" className="size-4" />
-      </AnimatedSidebarClose>
-    </AnimatedSidebarHeader>
+      <AnimatedSidebarHeader
+        style={{ opacity: chrome }}
+        inert={chrome < 0.5}
+        className={cn(
+          "col-start-1 row-start-1 min-w-0 flex-row items-center gap-1",
+          chrome < 0.02 && "hidden",
+        )}
+      >
+        <OrgSwitcher org={org} />
+        <AnimatedSidebarClose aria-label="Collapse sidebar" className={ICON_BUTTON}>
+          <PanelLeftClose aria-hidden="true" className="size-4" />
+        </AnimatedSidebarClose>
+      </AnimatedSidebarHeader>
+    </div>
   );
 }
 
@@ -331,14 +339,14 @@ function CreateOrgModal({
 
 /* ───────────────────────── Navigation: AI Sidebar tree + icon rail ───────────────────────── */
 
-function SidebarNav() {
+function SidebarNav({ chrome }: { chrome: number }) {
   const orgId = useOrgId();
   const { experiments } = useOrgData();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { isMobile, setOpenMobile } = useAnimatedSidebar();
-  const collapsed = useCollapsed();
   const activeId = activeNavId(pathname, orgId);
+  const iconSettings = useDesign().icons;
 
   const go = (to: string) => {
     navigate(to);
@@ -353,19 +361,51 @@ function SidebarNav() {
 
   return (
     <>
-      <AISidebar
-        items={NAV_TREE}
-        editable={false}
-        ariaLabel="Navigation"
-        activeId={activeId ?? ""}
-        onActiveChange={select}
-        renderIcon={(item) => {
-          const Icon = NAV_ICONS[item.id];
-          return Icon ? <Icon className="size-4" /> : undefined;
-        }}
-      />
+      <div className="grid w-full min-w-0">
+        <div
+          style={{ opacity: 1 - chrome }}
+          inert={chrome >= 0.5}
+          className={cn("col-start-1 row-start-1 min-w-0", chrome > 0.98 && "hidden")}
+        >
+          <AnimatedSidebarMenu aria-label="Navigation">
+            {RAIL_ITEMS.map((id) => {
+              const Icon = resolveNavIcon(id, iconSettings);
+              const label = NAV_TREE.find((item) => item.id === id)?.label ?? id;
+              return (
+                <AnimatedSidebarMenuItem key={id}>
+                  <AnimatedSidebarMenuButton
+                    icon={<Icon className="size-4" strokeWidth={iconSettings.strokeWidth} />}
+                    isActive={activeId === id}
+                    className="px-4"
+                    onSelect={() => select(id)}
+                  >
+                    {label}
+                  </AnimatedSidebarMenuButton>
+                </AnimatedSidebarMenuItem>
+              );
+            })}
+          </AnimatedSidebarMenu>
+        </div>
+        <div
+          style={{ opacity: chrome }}
+          inert={chrome < 0.5}
+          className={cn("col-start-1 row-start-1 min-w-0", chrome < 0.02 && "hidden")}
+        >
+          <AISidebar
+            items={NAV_TREE}
+            editable={false}
+            ariaLabel="Navigation"
+            activeId={activeId ?? ""}
+            onActiveChange={select}
+            renderIcon={(item) => {
+              const Icon = resolveNavIcon(item.id, iconSettings);
+              return <Icon className="size-4" strokeWidth={iconSettings.strokeWidth} />;
+            }}
+          />
+        </div>
+      </div>
       {experiments.length ? (
-        <div className="group-data-[state=collapsed]/sidebar:hidden">
+        <RevealBlock reveal={chrome}>
           <div aria-hidden="true" className="mx-2 my-2 h-px bg-border" />
           <nav aria-label="Your experiments" className="flex flex-col gap-0.5">
             {experiments.map((experiment) => {
@@ -386,29 +426,34 @@ function SidebarNav() {
               );
             })}
           </nav>
-        </div>
-      ) : null}
-      {collapsed ? (
-        <AnimatedSidebarMenu aria-label="Navigation">
-          {RAIL_ITEMS.map((id) => {
-            const Icon = NAV_ICONS[id];
-            const label = NAV_TREE.find((item) => item.id === id)?.label ?? id;
-            return (
-              <AnimatedSidebarMenuItem key={id}>
-                <AnimatedSidebarMenuButton
-                  icon={<Icon className="size-4" />}
-                  isActive={activeId === id}
-                  className="px-4"
-                  onSelect={() => select(id)}
-                >
-                  {label}
-                </AnimatedSidebarMenuButton>
-              </AnimatedSidebarMenuItem>
-            );
-          })}
-        </AnimatedSidebarMenu>
+        </RevealBlock>
       ) : null}
     </>
+  );
+}
+
+function RevealBlock({ reveal, children }: { reveal: number; children: ReactNode }) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    const node = innerRef.current;
+    if (!node) return;
+    const measure = () => setHeight(node.scrollHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      inert={reveal < 0.5}
+      className={cn("overflow-hidden", reveal <= 0 && "hidden")}
+      style={{ height: reveal >= 1 ? "auto" : Math.round(height * reveal), opacity: reveal }}
+    >
+      <div ref={innerRef}>{children}</div>
+    </div>
   );
 }
 
@@ -421,14 +466,13 @@ const ACCOUNT_LINKS = [
   { path: "settings", label: "Settings", icon: Settings },
 ] as const;
 
-function UserMenu() {
+function UserMenu({ chrome }: { chrome: number }) {
   const { you, theme } = useStore();
   const org = useCurrentOrg();
   const orgId = useOrgId();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { isMobile, setOpenMobile } = useAnimatedSidebar();
-  const collapsed = useCollapsed();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRadius = Math.round(radiusSteps(useDesign().radius).xl);
 
@@ -444,21 +488,17 @@ function UserMenu() {
         <button
           type="button"
           aria-label={`${you.name}, user profile`}
-          title={collapsed ? you.name : undefined}
-          className={cn(
-            "flex min-w-0 items-center gap-2.5 rounded-xl text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
-            collapsed ? "size-11 justify-center self-center" : "h-12 w-full px-1.5",
-          )}
+          title={chrome < 0.5 ? you.name : undefined}
+          className="flex h-12 w-full min-w-0 items-center gap-2.5 overflow-hidden rounded-xl pl-2 pr-1.5 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Avatar name={you.name} size="sm" />
-          {collapsed ? null : (
-            <>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium text-foreground">{you.name}</span>
-                <span className="truncate text-xs text-muted-foreground">User profile</span>
-              </span>
-            </>
-          )}
+          <span
+            style={{ opacity: chrome }}
+            className={cn("flex min-w-0 flex-1 flex-col", chrome < 0.02 && "invisible")}
+          >
+            <span className="truncate text-sm font-medium text-foreground">{you.name}</span>
+            <span className="truncate text-xs text-muted-foreground">User profile</span>
+          </span>
         </button>
       </MorphPopoverTrigger>
       <MorphPopoverContent side="top" align="start" sideOffset={8} radius={menuRadius} className="w-64 p-1.5">
@@ -520,30 +560,31 @@ function UserMenu() {
 
 function ResizeRail({
   width,
+  dragWidth,
   expanded,
-  onResize,
-  onResizeEnd,
-  onCollapse,
-  onExpand,
+  onDragWidth,
+  onCommit,
 }: {
   width: number;
+  dragWidth: number | null;
   expanded: boolean;
-  onResize: (width: number) => void;
-  onResizeEnd: (width: number) => void;
-  onCollapse: (restoreWidth: number) => void;
-  onExpand: (width: number) => void;
+  onDragWidth: (width: number | null) => void;
+  onCommit: (open: boolean, width: number) => void;
 }) {
+  const { reduce } = useAnimatedSidebar();
   const swallowClick = useRef(false);
+  const settleRef = useRef<{ stop: () => void } | null>(null);
+
+  useEffect(() => () => settleRef.current?.stop(), []);
 
   const startDrag = (startX: number) => {
-    const preferred = width;
+    settleRef.current?.stop();
+    settleRef.current = null;
+    const origin = dragWidth ?? (expanded ? width : ICON_WIDTH);
     let moved = false;
     let ended = false;
-    let panelOpen = expanded;
-    let settled = width;
-    let pullFrom = startX;
-    // Maps the pointer to a sidebar width. Rebased when the panel snaps open or shut.
-    let grab = (expanded ? width : ICON_WIDTH) - startX;
+    let current = origin;
+    let cancelled = false;
 
     const cleanup = () => {
       window.removeEventListener("pointermove", move);
@@ -553,30 +594,40 @@ function ResizeRail({
       document.body.style.removeProperty("user-select");
     };
 
+    const settle = (nextOpen: boolean, target: number) => {
+      const distance = Math.abs(target - current);
+      if (reduce || distance < 1) {
+        onCommit(nextOpen, target);
+        return;
+      }
+      const controls = animate(current, target, {
+        duration: Math.min(0.32, 0.16 + distance / 900),
+        ease: EASE_OUT,
+        onUpdate: (value) => onDragWidth(Math.round(value)),
+        onComplete: () => {
+          if (cancelled) return;
+          settleRef.current = null;
+          onCommit(nextOpen, target);
+        },
+      });
+      settleRef.current = {
+        stop: () => {
+          cancelled = true;
+          controls.stop();
+        },
+      };
+    };
+
     const move = (event: PointerEvent) => {
+      const delta = event.clientX - startX;
       if (!moved) {
-        if (Math.abs(event.clientX - startX) < 3) return;
+        if (Math.abs(delta) < 3) return;
         moved = true;
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
       }
-      if (!panelOpen) {
-        if (event.clientX - pullFrom < PULL_OPEN) return;
-        panelOpen = true;
-        grab = MIN_WIDTH - event.clientX;
-        settled = MIN_WIDTH;
-        onExpand(settled);
-        return;
-      }
-      const next = event.clientX + grab;
-      if (next < COLLAPSE_AT) {
-        panelOpen = false;
-        pullFrom = event.clientX;
-        onCollapse(preferred);
-        return;
-      }
-      settled = clampWidth(next);
-      onResize(settled);
+      current = Math.min(MAX_WIDTH, Math.max(ICON_WIDTH, Math.round(origin + delta)));
+      onDragWidth(current);
     };
 
     const end = () => {
@@ -585,7 +636,8 @@ function ResizeRail({
       cleanup();
       if (!moved) return;
       swallowClick.current = true;
-      if (panelOpen) onResizeEnd(settled);
+      const nextOpen = current >= COMMIT_AT;
+      settle(nextOpen, nextOpen ? clampWidth(current) : ICON_WIDTH);
     };
 
     window.addEventListener("pointermove", move);
@@ -595,7 +647,7 @@ function ResizeRail({
 
   return (
     <AnimatedSidebarRail
-      aria-label={expanded ? "Drag to resize. Drag past the edge to collapse." : "Drag to expand, or click."}
+      aria-label={expanded ? "Drag to resize. Drag inward to collapse." : "Drag to expand, or click."}
       className="cursor-col-resize touch-none"
       onPointerDown={(event) => {
         if (event.button !== 0) return;

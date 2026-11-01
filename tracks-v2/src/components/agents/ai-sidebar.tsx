@@ -507,7 +507,7 @@ function ResourceRow({
         !acceptsChildren && active && "bg-muted text-foreground",
         row.item.disabled && "cursor-not-allowed opacity-45",
       )}
-      style={{ paddingLeft: `${12 + row.depth * 16}px` }}
+      style={{ paddingLeft: `${16 + row.depth * 16}px` }}
     >
       <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center">
         {renderIcon?.(row.item) ?? defaultIcon(row.item, expanded)}

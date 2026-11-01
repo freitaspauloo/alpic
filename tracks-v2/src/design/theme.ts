@@ -1,5 +1,9 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_HERO, loadHeroConfig, type HeroConfig } from "@/pages/landing-hero";
+import { DEFAULT_ICON_SETTINGS, type IconSettings, mergeIconSettings } from "./icons";
+import { installUploadedFonts, loadSharedFonts } from "./fonts";
+
+export type { IconSettings } from "./icons";
 
 /**
  * One design document for the landing page and the product.
@@ -37,10 +41,15 @@ export type Palette = {
 export type TypeSettings = {
   sans: string;
   mono: string;
-  /** Modular scale between body, section, and title. Display sits above title. */
+  /** Modular scale. Moving it rewrites the role sizes from the body size. */
   ratio: number;
-  /** Body size in px. The other roles are derived from this and the ratio. */
   body: number;
+  display: number;
+  title: number;
+  section: number;
+  eyebrow: number;
+  /** Size of the mono specimen and code blocks, in px. */
+  monoSize: number;
   /** Display and title tracking, in em. */
   tracking: number;
 };
@@ -65,22 +74,24 @@ export type DesignState = {
   type: TypeSettings;
   space: SpaceSettings;
   radius: RadiusSettings;
+  icons: IconSettings;
   hero: HeroConfig;
 };
 
 const SANS = '"Geist Variable", ui-sans-serif, system-ui, sans-serif';
 const MONO = '"Geist Mono Variable", ui-monospace, SFMono-Regular, monospace';
 
-export const SANS_FONTS = [
-  { id: "geist", label: "Geist", value: SANS },
-  { id: "system", label: "System", value: "ui-sans-serif, system-ui, sans-serif" },
-  { id: "serif", label: "Serif", value: 'Georgia, "Times New Roman", serif' },
-] as const;
+export function scaleRoles(body: number, ratio: number) {
+  const section = Math.round(body * ratio * 10) / 10;
+  const title = Math.round(section * ratio * 10) / 10;
+  const display = Math.round(title * ratio * 1.8 * 10) / 10;
+  const eyebrow = Math.round(Math.max(10, body * 0.75) * 10) / 10;
+  return { display, title, section, eyebrow, monoSize: eyebrow };
+}
 
-export const MONO_FONTS = [
-  { id: "geist-mono", label: "Geist Mono", value: MONO },
-  { id: "system-mono", label: "System mono", value: "ui-monospace, SFMono-Regular, monospace" },
-] as const;
+function sizedType(type: Omit<TypeSettings, "display" | "title" | "section" | "eyebrow" | "monoSize">): TypeSettings {
+  return { ...type, ...scaleRoles(type.body, type.ratio) };
+}
 
 const LIGHT: Palette = {
   background: "oklch(99% 0 0)",
@@ -135,9 +146,10 @@ const DARK: Palette = {
 export const DEFAULT_DESIGN: DesignState = {
   light: LIGHT,
   dark: DARK,
-  type: { sans: SANS, mono: MONO, ratio: 1.25, body: 15, tracking: -0.04 },
+  type: sizedType({ sans: SANS, mono: MONO, ratio: 1.25, body: 15, tracking: -0.04 }),
   space: { base: 4, page: 32, section: 32, control: 8 },
   radius: { base: 8, ratio: 1.5 },
+  icons: { ...DEFAULT_ICON_SETTINGS, nav: { ...DEFAULT_ICON_SETTINGS.nav } },
   hero: DEFAULT_HERO,
 };
 
@@ -218,6 +230,7 @@ function themeDesign(design: ThemeDesign): ThemeDesign {
     type: { ...design.type },
     space: { ...design.space },
     radius: { ...design.radius },
+    icons: { ...design.icons, nav: { ...design.icons.nav } },
   };
 }
 
@@ -232,6 +245,7 @@ const BUILT_IN_THEMES: SavedTheme[] = [
       type: DEFAULT_DESIGN.type,
       space: DEFAULT_DESIGN.space,
       radius: DEFAULT_DESIGN.radius,
+      icons: DEFAULT_DESIGN.icons,
     }),
   },
   {
@@ -241,9 +255,10 @@ const BUILT_IN_THEMES: SavedTheme[] = [
     design: themeDesign({
       light: QUIET_LIGHT,
       dark: QUIET_DARK,
-      type: { sans: SANS, mono: MONO, ratio: 1.2, body: 15, tracking: -0.02 },
+      type: sizedType({ sans: SANS, mono: MONO, ratio: 1.2, body: 15, tracking: -0.02 }),
       space: { base: 4, page: 28, section: 24, control: 8 },
       radius: { base: 12, ratio: 1.4 },
+      icons: DEFAULT_DESIGN.icons,
     }),
   },
   {
@@ -253,9 +268,10 @@ const BUILT_IN_THEMES: SavedTheme[] = [
     design: themeDesign({
       light: INK_LIGHT,
       dark: INK_DARK,
-      type: { sans: SERIF, mono: MONO, ratio: 1.15, body: 17, tracking: -0.02 },
+      type: sizedType({ sans: SERIF, mono: MONO, ratio: 1.15, body: 17, tracking: -0.02 }),
       space: { base: 4, page: 40, section: 40, control: 10 },
       radius: { base: 4, ratio: 1.25 },
+      icons: DEFAULT_DESIGN.icons,
     }),
   },
 ];
@@ -331,12 +347,14 @@ const CSS_VAR: Record<keyof Palette, string> = {
 };
 
 export function typeRoles(type: TypeSettings) {
-  const body = type.body;
-  const section = body * type.ratio;
-  const title = section * type.ratio;
-  const display = title * type.ratio * 1.8;
-  const eyebrow = Math.max(10, body * 0.75);
-  return { body, section, title, display, eyebrow };
+  return {
+    display: type.display,
+    title: type.title,
+    section: type.section,
+    body: type.body,
+    eyebrow: type.eyebrow,
+    mono: type.monoSize,
+  };
 }
 
 export function radiusSteps(radius: RadiusSettings) {
@@ -359,6 +377,8 @@ const BUILT_IN_IDS = new Set(BUILT_IN_THEMES.map((theme) => theme.id));
 type ThemeLibrary = {
   activeId: string;
   custom: SavedTheme[];
+  /** Saved edits of Tracks, Quiet, and Ink. The code copies stay the first-run defaults. */
+  overrides: Record<string, ThemeDesign>;
 };
 
 export type ThemeLibraryView = {
@@ -374,6 +394,7 @@ function sliceDesign(design: DesignState): ThemeDesign {
     type: design.type,
     space: design.space,
     radius: design.radius,
+    icons: design.icons,
   };
 }
 
@@ -390,31 +411,68 @@ function sanitizeSaved(value: unknown): SavedTheme | null {
   return { id: raw.id, name, builtin: false, design: sliceDesign(sanitizeDesign(raw.design)) };
 }
 
+function sanitizeOverrides(value: unknown): Record<string, ThemeDesign> {
+  if (!value || typeof value !== "object") return {};
+  const overrides: Record<string, ThemeDesign> = {};
+  for (const [id, design] of Object.entries(value as Record<string, unknown>)) {
+    if (!BUILT_IN_IDS.has(id)) continue;
+    overrides[id] = sliceDesign(sanitizeDesign(design));
+  }
+  return overrides;
+}
+
 function readLibrary(): ThemeLibrary {
   try {
-    const raw = JSON.parse(localStorage.getItem(THEMES_KEY) || "") as { activeId?: unknown; custom?: unknown };
+    const raw = JSON.parse(localStorage.getItem(THEMES_KEY) || "") as {
+      activeId?: unknown;
+      custom?: unknown;
+      overrides?: unknown;
+    };
     const custom = Array.isArray(raw.custom) ? raw.custom.flatMap((item) => sanitizeSaved(item) ?? []) : [];
     const ids = new Set([...BUILT_IN_IDS, ...custom.map((theme) => theme.id)]);
     const activeId = typeof raw.activeId === "string" && ids.has(raw.activeId) ? raw.activeId : "tracks";
-    return { activeId, custom };
+    return { activeId, custom, overrides: sanitizeOverrides(raw.overrides) };
   } catch {
-    return { activeId: "tracks", custom: [] };
+    return { activeId: "tracks", custom: [], overrides: {} };
   }
 }
 
-let library: ThemeLibrary = { activeId: "tracks", custom: [] };
+let library: ThemeLibrary = { activeId: "tracks", custom: [], overrides: {} };
+const removedIds = new Set<string>();
 let libraryView: ThemeLibraryView | null = null;
 
 function allThemes() {
-  return [...BUILT_IN_THEMES, ...library.custom];
+  return [...BUILT_IN_THEMES, ...library.custom].map((theme) => {
+    const override = library.overrides[theme.id];
+    return override ? { ...theme, design: override } : theme;
+  });
 }
 
 function activeTheme() {
   return allThemes().find((theme) => theme.id === library.activeId) ?? BUILT_IN_THEMES[0];
 }
 
+function writeLibrary() {
+  localStorage.setItem(
+    THEMES_KEY,
+    JSON.stringify({
+      activeId: library.activeId,
+      custom: library.custom,
+      overrides: library.overrides,
+      revision,
+    }),
+  );
+}
+
 function persistLibrary() {
-  localStorage.setItem(THEMES_KEY, JSON.stringify({ activeId: library.activeId, custom: library.custom }));
+  if (!applyingRemote) {
+    revision = Date.now();
+    editedAt = revision;
+  }
+  writeLibrary();
+  if (applyingRemote) return;
+  channel?.postMessage(sharedPayload());
+  schedulePush();
 }
 
 function readLibraryView(): ThemeLibraryView {
@@ -436,6 +494,7 @@ export function useThemes() {
 export function selectTheme(id: string) {
   const theme = allThemes().find((item) => item.id === id);
   if (!theme || theme.id === library.activeId) return;
+  recordStep();
   library = { ...library, activeId: theme.id };
   libraryView = null;
   persistLibrary();
@@ -451,38 +510,49 @@ export function saveTheme(name: string) {
     builtin: false,
     design: themeDesign(sliceDesign(state)),
   };
-  library = { activeId: saved.id, custom: [...library.custom, saved] };
+  library = { ...library, activeId: saved.id, custom: [...library.custom, saved] };
   libraryView = null;
   persistLibrary();
   emit();
   return saved.id;
 }
 
-export function updateActiveTheme() {
+/** Write the current look onto the selected theme, built in or saved, and apply it in every window. */
+export function applyTheme() {
+  flushStep();
+  const snapshot = themeDesign(sliceDesign(state));
   const current = library.custom.find((theme) => theme.id === library.activeId);
-  if (!current) return;
-  library = {
-    ...library,
-    custom: library.custom.map((theme) =>
-      theme.id === current.id ? { ...theme, design: themeDesign(sliceDesign(state)) } : theme,
-    ),
-  };
+  if (current) {
+    library = {
+      ...library,
+      custom: library.custom.map((theme) => (theme.id === current.id ? { ...theme, design: snapshot } : theme)),
+    };
+  } else if (BUILT_IN_IDS.has(library.activeId)) {
+    library = { ...library, overrides: { ...library.overrides, [library.activeId]: snapshot } };
+  }
   libraryView = null;
   persistLibrary();
   emit();
 }
 
+export function updateActiveTheme() {
+  applyTheme();
+}
+
 export function deleteTheme(id: string) {
   if (!library.custom.some((theme) => theme.id === id)) return;
+  removedIds.add(id);
   const wasActive = library.activeId === id;
   library = {
+    ...library,
     activeId: wasActive ? "tracks" : library.activeId,
     custom: library.custom.filter((theme) => theme.id !== id),
   };
   libraryView = null;
   persistLibrary();
   if (wasActive) {
-    setDesign({ ...themeDesign(BUILT_IN_THEMES[0].design), hero: { ...state.hero } });
+    const tracks = allThemes().find((theme) => theme.id === "tracks") ?? BUILT_IN_THEMES[0];
+    setDesign({ ...themeDesign(tracks.design), hero: { ...state.hero } });
     return;
   }
   emit();
@@ -490,12 +560,14 @@ export function deleteTheme(id: string) {
 
 /** Put the selected theme back. Hero settings stay. */
 export function resetActiveTheme() {
+  recordStep();
   const theme = activeTheme();
   setDesign({ ...themeDesign(theme.design), hero: { ...state.hero } });
 }
 
 /** Put the selected theme back, and the hero back to its defaults. */
 export function resetEverything() {
+  recordStep();
   const theme = activeTheme();
   setDesign({ ...themeDesign(theme.design), hero: { ...DEFAULT_HERO } });
 }
@@ -520,6 +592,29 @@ function mergeNumber<T extends Record<string, number | string>>(base: T, value: 
   return next;
 }
 
+function mergeType(value: unknown): TypeSettings {
+  const fallback = DEFAULT_DESIGN.type;
+  if (!value || typeof value !== "object") return { ...fallback };
+  const raw = value as Partial<TypeSettings>;
+  const body = typeof raw.body === "number" ? raw.body : fallback.body;
+  const ratio = typeof raw.ratio === "number" ? raw.ratio : fallback.ratio;
+  const scaled = scaleRoles(body, ratio);
+  const size = (key: "display" | "title" | "section" | "eyebrow" | "monoSize") =>
+    typeof raw[key] === "number" ? raw[key] : scaled[key];
+  return {
+    sans: typeof raw.sans === "string" && raw.sans.trim() ? raw.sans : fallback.sans,
+    mono: typeof raw.mono === "string" && raw.mono.trim() ? raw.mono : fallback.mono,
+    ratio,
+    body,
+    tracking: typeof raw.tracking === "number" ? raw.tracking : fallback.tracking,
+    display: size("display"),
+    title: size("title"),
+    section: size("section"),
+    eyebrow: size("eyebrow"),
+    monoSize: size("monoSize"),
+  };
+}
+
 function mergeHero(value: unknown): HeroConfig {
   const next = { ...DEFAULT_HERO };
   if (!value || typeof value !== "object") return next;
@@ -535,9 +630,10 @@ export function sanitizeDesign(value: unknown): DesignState {
   return {
     light: mergePalette(LIGHT, raw.light),
     dark: mergePalette(DARK, raw.dark),
-    type: mergeNumber(DEFAULT_DESIGN.type, raw.type),
+    type: mergeType(raw.type),
     space: mergeNumber(DEFAULT_DESIGN.space, raw.space),
     radius: mergeNumber(DEFAULT_DESIGN.radius, raw.radius),
+    icons: mergeIconSettings(raw.icons),
     hero: mergeHero(raw.hero),
   };
 }
@@ -556,9 +652,224 @@ let state: DesignState = DEFAULT_DESIGN;
 let mode: Mode = "light";
 const listeners = new Set<() => void>();
 
+const past: DesignState[] = [];
+const future: DesignState[] = [];
+let checkpoint: DesignState | null = null;
+let checkpointTimer = 0;
+let historyView = { canUndo: false, canRedo: false };
+let applyingRemote = false;
+let editedAt = 0;
+let revision = 0;
+let announcedLocal = false;
+let pushTimer = 0;
+let lastPushed = "";
+let hadStored = false;
+let channel: BroadcastChannel | null = null;
+
+function cloneDesign(design: DesignState): DesignState {
+  return JSON.parse(JSON.stringify(design)) as DesignState;
+}
+
+function refreshHistory() {
+  const canUndo = past.length > 0 || checkpoint !== null;
+  const canRedo = future.length > 0;
+  if (historyView.canUndo === canUndo && historyView.canRedo === canRedo) return;
+  historyView = { canUndo, canRedo };
+}
+
 function emit() {
   libraryView = null;
+  refreshHistory();
   listeners.forEach((listener) => listener());
+}
+
+function flushStep() {
+  window.clearTimeout(checkpointTimer);
+  if (checkpoint && JSON.stringify(checkpoint) !== JSON.stringify(state)) {
+    past.push(checkpoint);
+    if (past.length > 80) past.shift();
+    future.length = 0;
+  }
+  checkpoint = null;
+}
+
+function recordStep() {
+  flushStep();
+  past.push(cloneDesign(state));
+  if (past.length > 80) past.shift();
+  future.length = 0;
+}
+
+function sharedPayload() {
+  return {
+    design: state,
+    activeId: library.activeId,
+    custom: library.custom,
+    overrides: library.overrides,
+    removed: [...removedIds],
+    revision,
+  };
+}
+
+function schedulePush() {
+  if (applyingRemote) return;
+  window.clearTimeout(pushTimer);
+  pushTimer = window.setTimeout(() => {
+    void pushShared();
+  }, 200);
+}
+
+async function pushShared() {
+  const body = JSON.stringify(sharedPayload());
+  if (body === lastPushed) return true;
+  lastPushed = body;
+  try {
+    const res = await fetch("/api/design", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    if (!res.ok) lastPushed = "";
+    return res.ok;
+  } catch {
+    lastPushed = "";
+    return false;
+  }
+}
+
+function adoptShared(raw: unknown) {
+  if (!raw || typeof raw !== "object") return;
+  const data = raw as {
+    design?: unknown;
+    activeId?: unknown;
+    custom?: unknown;
+    overrides?: unknown;
+    removed?: unknown;
+    revision?: unknown;
+  };
+  if (!data.design) return;
+  if (Date.now() - editedAt < 800) return;
+  if (Array.isArray(data.removed)) {
+    data.removed.forEach((id) => {
+      if (typeof id === "string") removedIds.add(id);
+    });
+  }
+  const incomingRev = typeof data.revision === "number" ? data.revision : 0;
+  const incoming = Array.isArray(data.custom) ? data.custom.flatMap((item) => sanitizeSaved(item) ?? []) : [];
+  const kept = library.custom.filter(
+    (theme) => !removedIds.has(theme.id) && !incoming.some((item) => item.id === theme.id),
+  );
+  const custom = [...incoming.filter((theme) => !removedIds.has(theme.id)), ...kept];
+  const incomingOverrides = data.overrides === undefined ? null : sanitizeOverrides(data.overrides);
+  const overrides =
+    incomingOverrides === null
+      ? library.overrides
+      : incomingRev < revision
+        ? { ...incomingOverrides, ...library.overrides }
+        : incomingOverrides;
+  const localTheme = kept.find((theme) => theme.id === library.activeId);
+
+  // This window still has a saved theme the shared file has never seen. Publish it once.
+  if (localTheme && !announcedLocal) {
+    announcedLocal = true;
+    revision = Date.now();
+    editedAt = revision;
+    library = { ...library, custom, overrides };
+    libraryView = null;
+    writeLibrary();
+    schedulePush();
+    emit();
+    return;
+  }
+
+  if (incomingRev < revision) {
+    const customChanged = JSON.stringify(library.custom) !== JSON.stringify(custom);
+    const overridesChanged = JSON.stringify(library.overrides) !== JSON.stringify(overrides);
+    if (customChanged || overridesChanged) {
+      library = { ...library, custom, overrides };
+      libraryView = null;
+      writeLibrary();
+      if (kept.length || overridesChanged) schedulePush();
+      emit();
+    }
+    return;
+  }
+
+  const nextState = sanitizeDesign(data.design);
+  const ids = new Set([...BUILT_IN_IDS, ...custom.map((theme) => theme.id)]);
+  const activeId = typeof data.activeId === "string" && ids.has(data.activeId) ? data.activeId : "tracks";
+  const designChanged = JSON.stringify(state) !== JSON.stringify(nextState);
+  const libraryChanged =
+    library.activeId !== activeId ||
+    JSON.stringify(library.custom) !== JSON.stringify(custom) ||
+    JSON.stringify(library.overrides) !== JSON.stringify(overrides);
+  revision = Math.max(revision, incomingRev);
+  if (!designChanged && !libraryChanged) return;
+  applyingRemote = true;
+  state = nextState;
+  library = { activeId, custom, overrides };
+  if (designChanged) {
+    past.length = 0;
+    future.length = 0;
+    checkpoint = null;
+  }
+  localStorage.setItem(KEY, JSON.stringify(state));
+  writeLibrary();
+  lastPushed = JSON.stringify(sharedPayload());
+  applyDesign(document, state, mode);
+  applyingRemote = false;
+  emit();
+  if (kept.length) schedulePush();
+}
+
+async function pullShared() {
+  if (Date.now() - editedAt < 800) return;
+  const seen = revision;
+  try {
+    const res = await fetch("/api/design", { cache: "no-store" });
+    if (!res.ok || seen !== revision || Date.now() - editedAt < 800) return;
+    const text = await res.text();
+    if (!text || text === "{}") {
+      if (hadStored) void pushShared();
+      return;
+    }
+    if (text === lastPushed || seen !== revision) return;
+    adoptShared(JSON.parse(text));
+  } catch {
+    // The dev server is the shared copy. Local storage still covers this window.
+  }
+}
+
+/** Load the shared copy, then keep every open window on it. */
+export function syncDesign() {
+  channel = new BroadcastChannel("tracks-design");
+  channel.onmessage = (event) => adoptShared(event.data);
+  window.addEventListener("storage", (event) => {
+    if (event.key !== KEY && event.key !== THEMES_KEY) return;
+    try {
+      adoptShared({
+        design: JSON.parse(localStorage.getItem(KEY) || "null"),
+        ...JSON.parse(localStorage.getItem(THEMES_KEY) || "{}"),
+      });
+    } catch {
+      // Ignore a partial write from another window.
+    }
+  });
+  window.addEventListener("focus", () => {
+    void pullShared();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) void pullShared();
+  });
+  window.setInterval(() => {
+    if (document.hidden) return;
+    void pullShared();
+    void loadSharedFonts();
+  }, 2000);
+  void loadSharedFonts();
+  void pullShared().then(() => {
+    if (!lastPushed) void pushShared();
+  });
 }
 
 export function getDesign() {
@@ -575,6 +886,7 @@ export function subscribeDesign(listener: () => void) {
 }
 
 export function hydrateDesign() {
+  hadStored = Boolean(localStorage.getItem(KEY) || localStorage.getItem(THEMES_KEY));
   const stored = readStored();
   state = stored ?? { ...DEFAULT_DESIGN, hero: loadHeroConfig() };
   library = readLibrary();
@@ -586,6 +898,12 @@ export function hydrateDesign() {
 export function setDesign(next: DesignState) {
   state = next;
   localStorage.setItem(KEY, JSON.stringify(state));
+  if (!applyingRemote) {
+    revision = Date.now();
+    editedAt = revision;
+    channel?.postMessage(sharedPayload());
+    schedulePush();
+  }
   applyDesign(document, state, mode);
   emit();
 }
@@ -597,7 +915,39 @@ export function setDesignMode(next: Mode) {
 }
 
 export function patchDesign(patch: Partial<DesignState>) {
+  if (!checkpoint) checkpoint = cloneDesign(state);
+  window.clearTimeout(checkpointTimer);
+  checkpointTimer = window.setTimeout(() => {
+    flushStep();
+    emit();
+  }, 350);
   setDesign({ ...state, ...patch });
+}
+
+export function undoDesign() {
+  flushStep();
+  const prev = past.pop();
+  if (!prev) {
+    emit();
+    return;
+  }
+  future.push(cloneDesign(state));
+  setDesign(prev);
+}
+
+export function redoDesign() {
+  flushStep();
+  const next = future.pop();
+  if (!next) {
+    emit();
+    return;
+  }
+  past.push(cloneDesign(state));
+  setDesign(next);
+}
+
+export function useDesignHistory() {
+  return useSyncExternalStore(subscribeDesign, () => historyView, () => historyView);
 }
 
 export function useDesign() {
@@ -626,6 +976,9 @@ export function applyDesign(doc: Document, design: DesignState, active: Mode) {
   el.style.setProperty("--text-section", `${roles.section}px`);
   el.style.setProperty("--text-body", `${roles.body}px`);
   el.style.setProperty("--text-eyebrow", `${roles.eyebrow}px`);
+  el.style.setProperty("--text-mono", `${roles.mono}px`);
+  el.style.setProperty("--icon-stroke-width", String(design.icons.strokeWidth));
+  installUploadedFonts(el.ownerDocument);
   el.style.setProperty("--leading-display", "1.02");
   el.style.setProperty("--tracking-display", `${design.type.tracking}em`);
   el.style.setProperty("--tracking-title", `${design.type.tracking * 0.7}em`);
@@ -643,6 +996,7 @@ export function applyDesign(doc: Document, design: DesignState, active: Mode) {
   el.style.setProperty("--radius-xl", `${radius.xl}px`);
   el.style.setProperty("--radius-2xl", `${radius.xl2}px`);
   el.style.setProperty("--radius-3xl", `${radius.xl3}px`);
+  el.style.setProperty("--radius-control", `${radius.xl}px`);
 }
 
 export function readColor(input: string): { hex: string; alpha: number } {

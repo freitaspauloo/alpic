@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { Page } from "@/app/page-layout";
 import { Card, CARD_TARGET_CLASS, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/motion/card";
 import { useOrgData } from "@/data";
-import { NAV_ICONS } from "@/app/nav";
+import { resolveNavIcon } from "@/design/icons";
+import { useDesign } from "@/design/theme";
 import { IconTile, plural } from "./shared";
 
 const SECTIONS = [
@@ -42,6 +43,7 @@ const SECTIONS = [
 
 export function LibraryHub() {
   const { orgId, repositories, skills, mcpServers, tools } = useOrgData();
+  const icons = useDesign().icons;
   const counts: Record<(typeof SECTIONS)[number]["id"], number> = {
     repositories: repositories.length,
     skills: skills.length,
@@ -53,7 +55,7 @@ export function LibraryHub() {
     <Page title="Library" description="What agents can use when they run: codebases, instructions, servers, and tools.">
       <div className="grid gap-4 sm:grid-cols-2">
         {SECTIONS.map((section) => {
-          const Icon = NAV_ICONS[section.id];
+          const Icon = resolveNavIcon(section.id, icons);
           return (
             <Card key={section.id} interactive>
               <CardHeader>

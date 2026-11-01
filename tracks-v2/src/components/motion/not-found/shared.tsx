@@ -58,7 +58,7 @@ export function NotFoundActions({
         whileTap={whileTap}
         whileHover={whileHover}
         transition={SPRING_PRESS}
-        className="inline-flex h-11 select-none items-center justify-center rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        className="inline-flex h-11 select-none items-center justify-center rounded-[var(--radius-control)] bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         {homeLabel}
       </motion.a>
@@ -67,7 +67,7 @@ export function NotFoundActions({
         whileTap={whileTap}
         whileHover={whileHover}
         transition={SPRING_PRESS}
-        className="inline-flex h-11 select-none items-center justify-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
+        className="inline-flex h-11 select-none items-center justify-center rounded-[var(--radius-control)] border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
       >
         {browseLabel}
       </motion.a>

@@ -165,7 +165,7 @@ export function CodeBlock({
       >
         <pre
           className={cn(
-            "m-0 font-mono text-xs leading-5 text-foreground/85",
+            "m-0 font-mono text-[length:var(--text-mono)] leading-[1.45] text-foreground/85",
             !wrap && "min-w-max",
           )}
         >

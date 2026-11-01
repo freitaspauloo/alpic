@@ -73,7 +73,7 @@ function ProductFrame() {
   return (
     <div
       ref={frame}
-      className="relative h-[400px] overflow-hidden rounded-xl border border-border bg-background shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:h-[500px]"
+      className="relative h-full w-full overflow-hidden rounded-xl border border-border bg-background shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
     >
       {box.width > 0 ? (
         <iframe
@@ -118,7 +118,7 @@ function Pill({
   tone: "primary" | "quiet";
 }) {
   const className = cn(
-    "inline-flex h-10 items-center rounded-lg px-4 text-sm font-medium",
+    "inline-flex h-10 items-center rounded-[var(--radius-control)] px-4 text-sm font-medium",
     tone === "primary" ? "bg-primary text-primary-foreground hover:opacity-90" : "bg-muted text-foreground hover:bg-border",
   );
   if (to) {
@@ -140,45 +140,40 @@ export function Landing() {
 
   return (
     <main className="min-h-svh bg-background text-foreground antialiased">
-      <div
-        className="mx-auto flex max-w-[1120px] flex-col pt-5"
-        style={{ paddingLeft: "var(--space-page)", paddingRight: "var(--space-page)" }}
-      >
-        <header className="flex items-center gap-8">
+      <div className="flex flex-col pt-3" style={{ paddingLeft: "max(20px, 2vw)", paddingRight: "max(20px, 2vw)" }}>
+        <header className="flex items-center">
           <Link to="/" className="inline-flex items-center gap-2.5 text-foreground">
             <Mark className="size-6" />
             <span className="text-sm font-medium tracking-tight">Tracks</span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <Link to="/acme/experiments/new" className="hover:text-foreground">
-              New Experiment
-            </Link>
-            {PRODUCT.map((item) => (
-              <Link key={item.title} to={item.to} className="hover:text-foreground">
-                {item.title}
+          <nav className="ml-auto flex items-center gap-6 text-sm text-muted-foreground">
+            {["Pricing", "Docs", "About"].map((label) => (
+              <Link key={label} to="/" className="hidden hover:text-foreground md:inline">
+                {label}
               </Link>
             ))}
-          </nav>
-          <div className="ml-auto flex items-center" style={{ gap: "var(--space-control)" }}>
-            <Pill to="/acme/experiments" tone="primary">
-              Sign in
+            <Link to="/acme/experiments/new" className="hidden hover:text-foreground md:inline">
+              Login
+            </Link>
+            <Pill to="/acme/experiments/new" tone="primary">
+              Sign Up
             </Pill>
-          </div>
+          </nav>
         </header>
 
-        <section className="pt-10 sm:pt-12">
+        <section className="pt-10">
           <TextReveal
             as="h1"
             split="word"
             stagger={0.045}
             text={["Can agents actually", "use your product?"]}
-            className="font-medium text-foreground text-[length:var(--text-display)] leading-[var(--leading-display)] tracking-[var(--tracking-display)]"
+            className="max-w-xl font-medium text-foreground text-[length:var(--text-display)] leading-[var(--leading-display)] tracking-[var(--tracking-display)]"
           />
-          <p className="mt-5 max-w-md leading-relaxed text-muted-foreground" style={{ fontSize: "var(--text-body)" }}>
+          <p className="mt-6 max-w-md leading-relaxed text-muted-foreground" style={{ fontSize: "var(--text-body)" }}>
             Watch agents work through your app, inspect the evidence, know what to fix.
           </p>
-          <div className="mt-7 flex items-center" style={{ gap: "var(--space-control)" }}>
-            <Pill to="/acme/experiments" tone="primary">
+          <div className="mt-6 flex items-center" style={{ gap: "var(--space-control)" }}>
+            <Pill to="/acme/experiments/new" tone="primary">
               Sign in
             </Pill>
             <Pill onClick={scrollToProduct} tone="quiet">
@@ -188,16 +183,20 @@ export function Landing() {
         </section>
       </div>
 
-      <section className="relative mt-8 sm:mt-10" aria-label="Product">
-        <HeroVisual config={hero} />
-        <div className="relative z-10 mx-auto w-full max-w-[1120px] -mt-64 px-5 sm:-mt-[420px]">
-          <ProductFrame />
+      <section className="relative mt-9" aria-label="Product">
+        <div className="relative w-full overflow-hidden" style={{ aspectRatio: String(hero.aspect * 1.2) }}>
+          <div className="absolute inset-x-0 top-0 w-full" style={{ aspectRatio: String(hero.aspect) }}>
+            <HeroVisual config={hero} />
+          </div>
+          <div className="absolute left-1/2 w-[88%] -translate-x-1/2 top-[18%] h-[80%] sm:top-[22.8%] sm:h-[74.4%] sm:w-1/2">
+            <ProductFrame />
+          </div>
         </div>
       </section>
 
       <div
-        className="mx-auto flex max-w-[1120px] flex-col pb-16"
-        style={{ paddingLeft: "var(--space-page)", paddingRight: "var(--space-page)" }}
+        className="flex w-full max-w-[1120px] flex-col pb-16"
+        style={{ paddingLeft: "max(20px, 2vw)", paddingRight: "max(20px, 2vw)" }}
       >
         <section id="product" className="scroll-mt-16 pt-24">
           <p
@@ -233,7 +232,7 @@ export function Landing() {
           >
             Know what to fix.
           </p>
-          <Pill to="/acme/experiments" tone="primary">
+          <Pill to="/acme/experiments/new" tone="primary">
             Sign in
           </Pill>
         </footer>

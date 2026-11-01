@@ -1,13 +1,20 @@
-import { useId, useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Globe } from "lucide-react";
-import { Page } from "@/app/page-layout";
-import { RouterButtonLink } from "@/app/router-link";
+import { ArrowUp, ChevronDown, FolderGit2, Globe, Plus, X } from "lucide-react";
+import { MenuAction, MenuLabel, MenuSeparator } from "@/app/menu";
 import { Button } from "@/components/motion/button/base";
-import { CARD_TARGET_CLASS, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/motion/card";
 import { Input } from "@/components/motion/input";
-import { RadioGroup, RadioGroupItem } from "@/components/motion/radio";
-import { DEFAULT_AGENT, SCENARIO_STARTERS, newId, useOrgData, useStore, type Scenario } from "@/data";
+import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import {
+  AGENT_PRESETS,
+  DEFAULT_AGENT,
+  SCENARIO_STARTERS,
+  newId,
+  useOrgData,
+  useStore,
+  type Scenario,
+} from "@/data";
+import { radiusSteps, useDesign } from "@/design/theme";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_HOST = "acme.com";
@@ -20,17 +27,24 @@ function scenarioTitle(prompt: string, starterName: string | null) {
 }
 
 export function NewExperimentPage() {
-  const { orgId } = useOrgData();
+  const { orgId, repositories } = useOrgData();
   const { createExperiment, setNotice } = useStore();
   const navigate = useNavigate();
-  const promptId = useId();
+  const menuRadius = Math.round(radiusSteps(useDesign().radius).xl);
   const [host, setHost] = useState("");
   const [prompt, setPrompt] = useState("");
   const [starterLabel, setStarterLabel] = useState("");
+  const [agentName, setAgentName] = useState<string>(DEFAULT_AGENT.name);
+  const [repositoryId, setRepositoryId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<null | "product" | "repo" | "agent" | "attach">(null);
   const [error, setError] = useState<string | null>(null);
 
   const product = host.trim() || DEFAULT_HOST;
   const starter = SCENARIO_STARTERS.find((item) => item.label === starterLabel) ?? null;
+  const agent = AGENT_PRESETS.find((item) => item.name === agentName) ?? DEFAULT_AGENT;
+  const repository = repositories.find((item) => item.id === repositoryId) ?? null;
+
+  const openMenu = (name: NonNullable<typeof menu>) => (open: boolean) => setMenu(open ? name : null);
 
   const chooseStarter = (label: string) => {
     const next = SCENARIO_STARTERS.find((item) => item.label === label);
@@ -38,6 +52,7 @@ export function NewExperimentPage() {
     setStarterLabel(label);
     setPrompt(next.prompt.replaceAll("{website}", product));
     setError(null);
+    setMenu(null);
   };
 
   const onHost = (value: string) => {
@@ -58,131 +73,232 @@ export function NewExperimentPage() {
       name: scenarioTitle(text, starter?.name ?? null),
       prompt: text,
     };
-    const id = createExperiment(orgId, scenario.name, [scenario]);
-    setNotice("Experiment created. Claude will run this scenario.");
+    const id = createExperiment(orgId, scenario.name, [scenario], {
+      agent: { name: agent.name, model: agent.model, harness: agent.harness },
+      repositoryId,
+    });
+    setNotice(`Experiment created. ${agent.name} will run this scenario.`);
     navigate(`/${orgId}/experiments/${id}`);
   };
 
   return (
-    <Page
-      title="New experiment"
-      description="Describe one thing an agent should be able to do in your product. Tracks writes it as a scenario and runs Claude against it."
+    <div
+      className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center"
+      style={{ gap: "var(--space-section)", padding: "var(--space-page)" }}
     >
-      <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="flex min-w-0 flex-col gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle as="h2">Product</CardTitle>
-              <CardDescription>The site the agent has to use.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Input
-                label="Website"
-                value={host}
-                onChange={onHost}
-                placeholder={DEFAULT_HOST}
-                leftIcon={<Globe />}
-                autoFocus
-              />
-            </CardContent>
-          </Card>
+      <div className="flex flex-col gap-2 text-center">
+        <h1
+          className="font-medium text-foreground"
+          style={{ fontSize: "var(--text-title)", letterSpacing: "var(--tracking-title)" }}
+        >
+          What should an agent be able to do?
+        </h1>
+        <p className="text-muted-foreground" style={{ fontSize: "var(--text-body)" }}>
+          One scenario. Tracks runs it against {product}.
+        </p>
+      </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle as="h2">Scenario</CardTitle>
-              <CardDescription>What the agent should do, in plain language. This is the only scenario.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              <label htmlFor={promptId} className="px-1 text-sm font-medium text-foreground">
-                Prompt
-              </label>
-              <textarea
-                id={promptId}
-                value={prompt}
-                rows={6}
-                aria-invalid={error ? true : undefined}
-                aria-describedby={error ? `${promptId}-error` : `${promptId}-hint`}
-                placeholder={`Find the published prices on ${product}, including any mandatory fees.`}
-                onChange={(event) => {
-                  setPrompt(event.target.value);
-                  setStarterLabel("");
-                  if (error) setError(null);
-                }}
-                className={cn(
-                  "min-h-32 w-full resize-y rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring",
-                  error && "border-destructive focus-visible:ring-destructive/25",
-                )}
-              />
-              {error ? (
-                <p id={`${promptId}-error`} role="alert" className="px-1 text-xs text-destructive">
-                  {error}
-                </p>
-              ) : (
-                <p id={`${promptId}-hint`} className="px-1 text-xs text-muted-foreground">
-                  Claude sees exactly this text.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+      <form onSubmit={submit} className="flex flex-col" style={{ gap: "var(--space-control)" }}>
+        <div className="flex flex-wrap items-center" style={{ gap: "var(--space-control)" }}>
+          <Picker
+            open={menu === "product"}
+            onOpenChange={openMenu("product")}
+            radius={menuRadius}
+            label={`Product: ${product}`}
+            icon={<Globe className="size-3.5" />}
+            value={product}
+            panelClassName="w-72 gap-2 p-3"
+          >
+            <Input
+              label="Website"
+              value={host}
+              onChange={onHost}
+              placeholder={DEFAULT_HOST}
+              autoFocus
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.preventDefault();
+              }}
+            />
+            <p className="px-1 text-xs text-muted-foreground">The site the agent has to use. Attached questions fill in this address.</p>
+          </Picker>
 
-          <Card>
-            <CardHeader>
-              <CardTitle as="h2">Or start from a question</CardTitle>
-              <CardDescription>Tracks fills the prompt for {product}. You can still edit it.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RadioGroup
-                aria-label="Starter question"
-                value={starterLabel}
-                onValueChange={chooseStarter}
-                className="grid gap-3 sm:grid-cols-2"
+          <Picker
+            open={menu === "repo"}
+            onOpenChange={openMenu("repo")}
+            radius={menuRadius}
+            label={repository ? `Repository: ${repository.name}` : "Attach a repository"}
+            icon={<FolderGit2 className="size-3.5" />}
+            value={repository?.name ?? "No repository"}
+          >
+            <MenuLabel>Repository</MenuLabel>
+            <MenuAction active={!repository} onSelect={() => { setRepositoryId(null); setMenu(null); }}>
+              No repository
+            </MenuAction>
+            {repositories.map((item) => (
+              <MenuAction
+                key={item.id}
+                active={item.id === repositoryId}
+                trailing={<span className="font-mono">{item.ref}</span>}
+                onSelect={() => { setRepositoryId(item.id); setMenu(null); }}
               >
-                {SCENARIO_STARTERS.map((item) => (
-                  <Card key={item.label} size="compact" interactive selected={starterLabel === item.label}>
-                    <CardContent>
-                      <RadioGroupItem value={item.label} label={item.name} className={CARD_TARGET_CLASS} />
-                    </CardContent>
-                  </Card>
-                ))}
-              </RadioGroup>
-            </CardContent>
-          </Card>
+                {item.name}
+              </MenuAction>
+            ))}
+            <MenuSeparator />
+            <MenuAction icon={Plus} onSelect={() => navigate(`/${orgId}/library/repositories`)}>
+              Add repository
+            </MenuAction>
+          </Picker>
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-6">
-          <Card size="compact" variant="muted">
-            <CardHeader>
-              <CardTitle as="h2">This experiment</CardTitle>
-              <CardDescription>One scenario, judged when you launch it.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <dl className="flex flex-col divide-y divide-border text-sm">
-                <div className="flex items-baseline justify-between gap-3 py-2 first:pt-0">
-                  <dt className="text-muted-foreground">Product</dt>
-                  <dd className="truncate font-mono text-xs">{product}</dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3 py-2">
-                  <dt className="text-muted-foreground">Scenario</dt>
-                  <dd className="truncate">{starter?.name ?? "Custom"}</dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3 py-2 last:pb-0">
-                  <dt className="text-muted-foreground">Agent</dt>
-                  <dd>
-                    {DEFAULT_AGENT.name}
-                    <span className="text-muted-foreground"> · {DEFAULT_AGENT.model}</span>
-                  </dd>
-                </div>
-              </dl>
-              <Button type="submit" className="mt-1 w-full">
-                Start experiment
+        <div
+          className={cn(
+            "flex flex-col border border-border bg-card shadow-sm focus-within:ring-2 focus-within:ring-ring",
+            error && "border-destructive focus-within:ring-destructive/30",
+          )}
+          style={{ borderRadius: "var(--radius-2xl)" }}
+        >
+          {starter ? (
+            <div className="flex px-2.5 pt-2.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                aria-label={`Remove ${starter.name}`}
+                onClick={() => {
+                  setStarterLabel("");
+                  setPrompt("");
+                }}
+              >
+                {starter.name}
+                <X className="size-3.5 text-muted-foreground" />
               </Button>
-              <RouterButtonLink to={`/${orgId}/experiments`} variant="ghost" size="sm" className="w-full">
-                Cancel
-              </RouterButtonLink>
-            </CardContent>
-          </Card>
-        </aside>
+            </div>
+          ) : null}
+          <textarea
+            value={prompt}
+            rows={3}
+            aria-label="What the agent should do"
+            aria-invalid={error ? true : undefined}
+            placeholder="Describe what the agent should do. Attach a question, or write your own."
+            onChange={(event) => {
+              setPrompt(event.target.value);
+              setStarterLabel("");
+              if (error) setError(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            className="min-h-24 w-full resize-none bg-transparent px-3.5 py-3 text-foreground outline-none placeholder:text-muted-foreground/60"
+            style={{ fontSize: "var(--text-body)" }}
+          />
+          <div className="flex items-center px-2 pb-2" style={{ gap: "var(--space-control)" }}>
+            <Picker
+              open={menu === "attach"}
+              onOpenChange={openMenu("attach")}
+              radius={menuRadius}
+              label="Attach a question"
+              iconOnly
+              icon={<Plus className="size-4" />}
+            >
+              <MenuLabel>Attach</MenuLabel>
+              {SCENARIO_STARTERS.map((item) => (
+                <MenuAction key={item.label} active={item.label === starterLabel} onSelect={() => chooseStarter(item.label)}>
+                  {item.name}
+                </MenuAction>
+              ))}
+            </Picker>
+            <div className="ml-auto flex items-center" style={{ gap: "var(--space-control)" }}>
+              <Picker
+                open={menu === "agent"}
+                onOpenChange={openMenu("agent")}
+                radius={menuRadius}
+                label={`Agent: ${agent.name}`}
+                value={agent.name}
+                align="end"
+              >
+                <MenuLabel>Agent</MenuLabel>
+                {AGENT_PRESETS.map((item) => (
+                  <MenuAction
+                    key={item.name}
+                    active={item.name === agent.name}
+                    trailing={<span className="font-mono">{item.model}</span>}
+                    onSelect={() => { setAgentName(item.name); setMenu(null); }}
+                  >
+                    {item.name}
+                  </MenuAction>
+                ))}
+              </Picker>
+              <Button type="submit" size="icon" aria-label="Start experiment" disabled={!prompt.trim()} className="disabled:opacity-40">
+                <ArrowUp className="size-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {error ? (
+          <p role="alert" className="px-1 text-xs text-destructive">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap" style={{ gap: "var(--space-control)" }} role="group" aria-label="Questions">
+          {SCENARIO_STARTERS.map((item) => (
+            <Button
+              key={item.label}
+              type="button"
+              size="sm"
+              variant={item.label === starterLabel ? "primary" : "secondary"}
+              aria-pressed={item.label === starterLabel}
+              onClick={() => chooseStarter(item.label)}
+            >
+              {item.name}
+            </Button>
+          ))}
+        </div>
       </form>
-    </Page>
+    </div>
+  );
+}
+
+function Picker({
+  open,
+  onOpenChange,
+  radius,
+  label,
+  value,
+  icon,
+  iconOnly,
+  align = "start",
+  panelClassName = "w-64 p-1.5",
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  radius: number;
+  label: string;
+  value?: string;
+  icon?: ReactNode;
+  iconOnly?: boolean;
+  align?: "start" | "end";
+  panelClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <MorphPopover open={open} onOpenChange={onOpenChange}>
+      <MorphPopoverTrigger>
+        <Button type="button" variant="ghost" size={iconOnly ? "icon" : "sm"} aria-label={label} className={iconOnly ? undefined : "px-2"}>
+          {icon}
+          {iconOnly ? null : <span className="max-w-40 truncate">{value}</span>}
+          {iconOnly ? null : <ChevronDown className="size-3.5 text-muted-foreground" />}
+        </Button>
+      </MorphPopoverTrigger>
+      <MorphPopoverContent side="bottom" align={align} sideOffset={8} radius={radius} className={cn("flex flex-col", panelClassName)}>
+        {children}
+      </MorphPopoverContent>
+    </MorphPopover>
   );
 }

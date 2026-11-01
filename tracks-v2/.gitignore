@@ -1,2 +1,4 @@
 node_modules/
 dist/
+.design-store.json
+.fonts/
