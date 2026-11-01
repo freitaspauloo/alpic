@@ -188,7 +188,7 @@ export function Landing() {
           <div className="absolute inset-x-0 top-0 w-full" style={{ aspectRatio: String(hero.aspect) }}>
             <HeroVisual config={hero} />
           </div>
-          <div className="absolute left-1/2 w-[88%] -translate-x-1/2 top-[18%] h-[80%] sm:top-[22.8%] sm:h-[74.4%] sm:w-1/2">
+          <div className="absolute inset-x-0 top-[7%] bottom-0">
             <ProductFrame />
           </div>
         </div>

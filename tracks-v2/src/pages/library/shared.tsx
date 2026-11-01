@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useId, useRef, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
 import { MoreHorizontal, Plus, Search, X, type LucideIcon } from "lucide-react";
 import { MenuAction, MenuSeparator } from "@/app/menu";
 import { PageSection } from "@/app/page-layout";
@@ -83,10 +83,12 @@ export function IconTile({
   icon: Icon,
   size = "md",
   className,
+  strokeWidth,
 }: {
-  icon: LucideIcon;
+  icon: LucideIcon | ComponentType<{ className?: string; strokeWidth?: number }>;
   size?: "md" | "lg";
   className?: string;
+  strokeWidth?: number;
 }) {
   return (
     <span
@@ -97,7 +99,7 @@ export function IconTile({
         className,
       )}
     >
-      <Icon className="size-4" />
+      <Icon className="size-4" strokeWidth={strokeWidth} />
     </span>
   );
 }

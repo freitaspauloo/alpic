@@ -60,7 +60,7 @@ export function LibraryHub() {
             <Card key={section.id} interactive>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <IconTile icon={Icon} />
+                  <IconTile icon={Icon} strokeWidth={icons.strokeWidth} />
                   <CardTitle as="h2">
                     <Link to={`/${orgId}/library/${section.to}`} className={CARD_TARGET_CLASS}>
                       {section.title}

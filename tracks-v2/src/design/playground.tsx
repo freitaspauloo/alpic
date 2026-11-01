@@ -1,7 +1,10 @@
 import { Redo2, RotateCcw, SlidersHorizontal, Undo2, X } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useTheme } from "next-themes";
-import { RangeSlider } from "@/components/motion/range-slider";
+import { Alert, AlertDescription } from "@/components/motion/alert";
+import { AnimatedBadge } from "@/components/motion/animated-badge";
+import { Button } from "@/components/motion/button/base";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/motion/card";
 import {
   ColorPicker,
   ColorPickerAlpha,
@@ -15,9 +18,39 @@ import {
   formatHex,
   parseHex,
 } from "@/components/motion/color-picker";
-import { cn } from "@/lib/utils";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/motion/combobox";
+import { Input } from "@/components/motion/input";
+import { RangeSlider } from "@/components/motion/range-slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/motion/select";
+import { Switch } from "@/components/motion/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { ThemeToggle } from "@/components/motion/theme-toggle";
+import { Tooltip } from "@/components/motion/tooltip";
 import { IMAGE_FIELDS, SQUARE_FIELDS, type HeroConfig } from "@/pages/landing-hero";
-import { ICON_CATALOG, NAV_ICON_SLOTS, resolveNavIcon } from "./icons";
+import {
+  ICON_FAMILIES,
+  NAV_ICON_SLOTS,
+  clampWeight,
+  familyUsesStroke,
+  isPixelFamily,
+  resolveIcon,
+  resolveNavIcon,
+  strokeForWeight,
+  weightsFor,
+  type AppIcon,
+  type IconFamily,
+  type IconWeight,
+} from "./icons";
 import { MONO_FONTS, SANS_FONTS, fontStack, uploadFont, useUploadedFonts } from "./fonts";
 import {
   ALPHA_COLORS,
@@ -52,6 +85,8 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: "hero", label: "Hero" },
 ];
 
+const SERIF = new Set(["georgia", "newsreader", "fraunces", "source-serif", "literata"]);
+
 function cssColorToPickerValue(raw: string, withAlpha: boolean): string {
   const { hex, alpha } = readColor(raw);
   const rgba = parseHex(hex) ?? { r: 0, g: 0, b: 0, a: 1 };
@@ -65,6 +100,19 @@ function pickerValueToCss(hex: string): string {
   return writeColor(rgb, rgba.a);
 }
 
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function GroupTitle({ children }: { children: string }) {
+  return <h2 className="text-xs font-medium tracking-widest text-muted-foreground uppercase">{children}</h2>;
+}
+
 function Slider({
   label,
   value,
@@ -72,6 +120,7 @@ function Slider({
   max,
   step,
   display,
+  disabled,
   onChange,
 }: {
   id: string;
@@ -81,26 +130,74 @@ function Slider({
   max: number;
   step: number;
   display: string;
+  disabled?: boolean;
   onChange: (value: number) => void;
 }) {
   const steps = max > min && step > 0 ? Math.floor((max - min) / step) : 0;
   return (
-    <div className="grid gap-[6px]">
-      <div className="flex items-baseline justify-between gap-[12px]">
-        <span className="text-[12px] text-muted-foreground">{label}</span>
-        <span className="font-mono text-[11px] text-foreground tabular-nums">{display}</span>
-      </div>
+    <Field label={`${label} · ${display}`}>
       <RangeSlider
         aria-label={label}
         value={value}
         min={min}
         max={max}
         step={step}
+        disabled={disabled}
         showTicks={steps > 0 && steps <= 50}
+        formatValueText={() => display}
         onValueChange={onChange}
-        className="h-9 rounded-[var(--radius-lg)]"
       />
-    </div>
+    </Field>
+  );
+}
+
+function OptionPicker({
+  label,
+  value,
+  options,
+  onValueChange,
+  disabled,
+  strokeWidth,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string; group?: string; icon?: AppIcon }[];
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  strokeWidth?: number;
+}) {
+  const groups = [...new Set(options.map((option) => option.group ?? ""))];
+  return (
+    <Field label={label}>
+      <Combobox value={value} onValueChange={onValueChange} disabled={disabled}>
+        <ComboboxTrigger className="h-8 min-w-0 rounded-[var(--radius-control)]">
+          <ComboboxInput aria-label={label} placeholder={label} />
+        </ComboboxTrigger>
+        <ComboboxContent className="z-[70]">
+          <ComboboxList ariaLabel={label}>
+            {groups.map((group) => (
+              <ComboboxGroup key={group || "all"}>
+                {group ? <ComboboxLabel>{group}</ComboboxLabel> : null}
+                {options
+                  .filter((option) => (option.group ?? "") === group)
+                  .map((option) => {
+                    const Icon = option.icon;
+                    return (
+                      <ComboboxItem key={option.value} value={option.value} textValue={option.label}>
+                        <span className="flex items-center gap-2">
+                          {Icon ? <Icon className="size-4 shrink-0" strokeWidth={strokeWidth} aria-hidden /> : null}
+                          {option.label}
+                        </span>
+                      </ComboboxItem>
+                    );
+                  })}
+              </ComboboxGroup>
+            ))}
+            <ComboboxEmpty>No match.</ComboboxEmpty>
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </Field>
   );
 }
 
@@ -108,16 +205,16 @@ function ColorRow({ name, value, onChange }: { name: keyof Palette; value: strin
   const withAlpha = ALPHA_COLORS.has(name);
   const pickerValue = cssColorToPickerValue(value, withAlpha);
   return (
-    <div className="flex items-center justify-between gap-[10px]">
-      <span className="min-w-0 flex-1 truncate text-[12px] text-foreground">{COLOR_LABELS[name]}</span>
+    <div className="flex items-center justify-between gap-3">
+      <span className="min-w-0 flex-1 truncate text-sm text-foreground">{COLOR_LABELS[name]}</span>
       <ColorPicker
         aria-label={COLOR_LABELS[name]}
         value={pickerValue}
         alpha={withAlpha}
         onValueChange={(next) => onChange(pickerValueToCss(next))}
       >
-        <ColorPickerTrigger className="h-8 shrink-0 gap-2 rounded-[var(--radius-lg)] pr-2 pl-1.5 text-[11px]" />
-        <ColorPickerContent align="end" className="z-[60] w-[min(100vw-2rem,18rem)]">
+        <ColorPickerTrigger className="h-8" />
+        <ColorPickerContent align="end" className="z-[70]">
           <ColorPickerArea />
           <div className="flex items-center gap-3">
             <ColorPickerEyeDropper />
@@ -135,73 +232,6 @@ function ColorRow({ name, value, onChange }: { name: keyof Palette; value: strin
     </div>
   );
 }
-
-function IconSection() {
-  const design = useDesign();
-  const icons = design.icons;
-  const setIcons = (patch: Partial<typeof icons>) => patchDesign({ icons: { ...icons, ...patch } });
-  const setNavIcon = (navId: string, iconId: string) =>
-    patchDesign({ icons: { ...icons, nav: { ...icons.nav, [navId]: iconId } } });
-
-  return (
-    <section className="flex flex-col gap-[12px]">
-      <p className="text-[12px] leading-[1.45] text-muted-foreground">
-        Sidebar and library icons. Stroke applies everywhere Lucide icons render in the product shell.
-      </p>
-      <Heading>Style</Heading>
-      <label className="grid gap-[6px] text-[12px] text-muted-foreground">
-        Family
-        <select
-          value={icons.family}
-          disabled
-          className={cn("h-[32px] border border-border bg-background px-[8px] text-[12px] text-foreground", FIELD)}
-        >
-          <option value="lucide">Lucide</option>
-        </select>
-      </label>
-      <Slider
-        id="icon-stroke"
-        label="Stroke"
-        value={icons.strokeWidth}
-        min={1.25}
-        max={2.5}
-        step={0.25}
-        display={icons.strokeWidth.toFixed(2)}
-        onChange={(strokeWidth) => setIcons({ strokeWidth })}
-      />
-      <Heading>Navigation</Heading>
-      <div className="flex flex-wrap gap-[8px] border border-border p-[10px]">
-        {NAV_ICON_SLOTS.slice(0, 5).map(({ id }) => {
-          const Icon = resolveNavIcon(id, icons);
-          return <Icon key={id} className="size-4 text-foreground" strokeWidth={icons.strokeWidth} aria-hidden />;
-        })}
-      </div>
-      {NAV_ICON_SLOTS.map(({ id, label }) => (
-        <label key={id} className="grid gap-[6px] text-[12px] text-muted-foreground">
-          {label}
-          <select
-            value={icons.nav[id] ?? ""}
-            onChange={(event) => setNavIcon(id, event.target.value)}
-            className={cn("h-[32px] border border-border bg-background px-[8px] text-[12px] text-foreground", FIELD)}
-          >
-            {ICON_CATALOG.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ))}
-    </section>
-  );
-}
-
-function Heading({ children }: { children: string }) {
-  return <h2 className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">{children}</h2>;
-}
-
-const CONTROL = "rounded-[var(--radius-control)]";
-const FIELD = "rounded-[var(--radius-lg)]";
 
 function TypeSection() {
   const design = useDesign();
@@ -237,77 +267,59 @@ function TypeSection() {
   };
 
   return (
-    <section className="flex flex-col gap-[12px]">
-      <p className="text-[12px] leading-[1.45] text-muted-foreground">
-        Display is the landing headline. Title is the page name. Section is a block heading. Eyebrow is the small label. Mono is the code line under it. Scale rebuilds those sizes from body.
-      </p>
-      <Heading>Family</Heading>
-      <label className="grid gap-[6px] text-[12px] text-muted-foreground">
-        Sans
-        <select
-          value={design.type.sans}
-          onChange={(event) => setType({ sans: event.target.value })}
-          className={cn("h-[32px] border border-border bg-background px-[8px] text-[12px] text-foreground", FIELD)}
-          style={{ fontFamily: design.type.sans }}
-        >
-          <optgroup label="Sans">
-            {sansFonts.filter((font) => !["georgia", "newsreader", "fraunces", "source-serif", "literata"].includes(font.id)).map((font) => (
-              <option key={font.id} value={font.value} style={{ fontFamily: font.value }}>
-                {font.label}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Serif">
-            {sansFonts.filter((font) => ["georgia", "newsreader", "fraunces", "source-serif", "literata"].includes(font.id)).map((font) => (
-              <option key={font.id} value={font.value} style={{ fontFamily: font.value }}>
-                {font.label}
-              </option>
-            ))}
-          </optgroup>
-        </select>
-      </label>
-      <button type="button" onClick={() => sansFile.current?.click()} className={cn(ACTION, "w-fit text-muted-foreground hover:bg-muted hover:text-foreground")}>
-        Upload sans
-      </button>
-      <input
-        ref={sansFile}
-        type="file"
-        accept=".woff2,.woff,.ttf,.otf"
-        className="hidden"
-        onChange={(event) => {
-          void addFont(event.target.files?.[0], "sans");
-          event.target.value = "";
-        }}
+    <div className="flex flex-col gap-4">
+      <GroupTitle>Family</GroupTitle>
+      <OptionPicker
+        label="Sans"
+        value={design.type.sans}
+        onValueChange={(sans) => setType({ sans })}
+        options={sansFonts.map((font) => ({
+          value: font.value,
+          label: font.label,
+          group: SERIF.has(font.id) ? "Serif" : "Sans",
+        }))}
       />
-      <label className="grid gap-[6px] text-[12px] text-muted-foreground">
-        Mono
-        <select
-          value={design.type.mono}
-          onChange={(event) => setType({ mono: event.target.value })}
-          className={cn("h-[32px] border border-border bg-background px-[8px] text-[12px] text-foreground", FIELD)}
-          style={{ fontFamily: design.type.mono }}
-        >
-          {monoFonts.map((font) => (
-            <option key={font.id} value={font.value} style={{ fontFamily: font.value }}>
-              {font.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button type="button" onClick={() => monoFile.current?.click()} className={cn(ACTION, "w-fit text-muted-foreground hover:bg-muted hover:text-foreground")}>
-        Upload mono
-      </button>
-      <input
-        ref={monoFile}
-        type="file"
-        accept=".woff2,.woff,.ttf,.otf"
-        className="hidden"
-        onChange={(event) => {
-          void addFont(event.target.files?.[0], "mono");
-          event.target.value = "";
-        }}
+      <div>
+        <Button type="button" variant="ghost" size="sm" onClick={() => sansFile.current?.click()}>
+          Upload sans
+        </Button>
+        <input
+          ref={sansFile}
+          type="file"
+          accept=".woff2,.woff,.ttf,.otf"
+          className="hidden"
+          onChange={(event) => {
+            void addFont(event.target.files?.[0], "sans");
+            event.target.value = "";
+          }}
+        />
+      </div>
+      <OptionPicker
+        label="Mono"
+        value={design.type.mono}
+        onValueChange={(mono) => setType({ mono })}
+        options={monoFonts.map((font) => ({ value: font.value, label: font.label }))}
       />
-      {note ? <p className="text-[12px] text-muted-foreground">{note}</p> : null}
+      <div>
+        <Button type="button" variant="ghost" size="sm" onClick={() => monoFile.current?.click()}>
+          Upload mono
+        </Button>
+        <input
+          ref={monoFile}
+          type="file"
+          accept=".woff2,.woff,.ttf,.otf"
+          className="hidden"
+          onChange={(event) => {
+            void addFont(event.target.files?.[0], "mono");
+            event.target.value = "";
+          }}
+        />
+      </div>
+      {note ? (
+        <Alert variant="destructive">
+          <AlertDescription>{note}</AlertDescription>
+        </Alert>
+      ) : null}
       <Slider
         id="type-ratio"
         label="Scale"
@@ -337,102 +349,85 @@ function TypeSection() {
         display={`${design.type.tracking.toFixed(3)} em`}
         onChange={(tracking) => setType({ tracking })}
       />
-    </section>
+    </div>
   );
 }
 
-const ACTION = cn(
-  "inline-flex h-[28px] shrink-0 items-center px-[10px] text-[12px] leading-none disabled:pointer-events-none disabled:opacity-40",
-  CONTROL,
-);
+function IconSection() {
+  const design = useDesign();
+  const icons = design.icons;
+  const weight = icons.weight ?? "regular";
+  const setIcons = (patch: Partial<typeof icons>) => patchDesign({ icons: { ...icons, ...patch } });
+  const stroke = familyUsesStroke(icons.family, weight);
+  const families = ICON_FAMILIES.map((family) => ({
+    value: family.id,
+    label: family.label,
+    group: family.group,
+    icon: resolveIcon("sparkles", family.id, "regular"),
+  }));
+  const weights = weightsFor(icons.family).map((item) => ({
+    value: item.id,
+    label: item.label,
+    icon: resolveIcon("sparkles", icons.family, item.id),
+  }));
 
-const ICON_ACTION = cn(
-  "inline-flex size-[28px] shrink-0 items-center justify-center disabled:pointer-events-none disabled:opacity-40",
-  FIELD,
-  "text-muted-foreground hover:bg-muted hover:text-foreground",
-);
+  const chooseFamily = (value: string) => {
+    const family = value as IconFamily;
+    const nextWeight = clampWeight(family, weight);
+    const strokeWidth = familyUsesStroke(family, nextWeight) ? strokeForWeight(nextWeight) : null;
+    setIcons({ family, weight: nextWeight, ...(strokeWidth == null ? {} : { strokeWidth }) });
+  };
+
+  const chooseWeight = (value: string) => {
+    const nextWeight = value as IconWeight;
+    const strokeWidth = familyUsesStroke(icons.family, nextWeight) ? strokeForWeight(nextWeight) : null;
+    setIcons({ weight: nextWeight, ...(strokeWidth == null ? {} : { strokeWidth }) });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <GroupTitle>Style</GroupTitle>
+      <OptionPicker label="Family" value={icons.family} options={families} strokeWidth={icons.strokeWidth} onValueChange={chooseFamily} />
+      <OptionPicker label="Weight" value={weight} options={weights} strokeWidth={icons.strokeWidth} onValueChange={chooseWeight} />
+      {stroke ? (
+        <Slider
+          id="icon-stroke"
+          label="Stroke"
+          value={icons.strokeWidth}
+          min={1.25}
+          max={2.5}
+          step={0.25}
+          display={icons.strokeWidth.toFixed(2)}
+          onChange={(strokeWidth) => setIcons({ strokeWidth })}
+        />
+      ) : null}
+      <div className="flex flex-wrap gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-3">
+        {NAV_ICON_SLOTS.map(({ id }) => {
+          const Icon = resolveNavIcon(id, icons);
+          return (
+            <Icon
+              key={id}
+              className={isPixelFamily(icons.family) ? "size-6 text-foreground" : "size-4 text-foreground"}
+              strokeWidth={icons.strokeWidth}
+              aria-hidden
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 type ThemeActions = {
   naming: boolean;
   setNaming: (value: boolean | ((prev: boolean) => boolean)) => void;
   confirmDelete: boolean;
   setConfirmDelete: (value: boolean) => void;
+  name: string;
+  setName: (value: string) => void;
 };
 
-function PlaygroundFooter({ setNaming, confirmDelete, setConfirmDelete, setName }: ThemeActions & { setName: (value: string) => void }) {
-  const { activeId, themes, dirty } = useThemes();
-  const { canUndo, canRedo } = useDesignHistory();
-  const active = themes.find((theme) => theme.id === activeId) ?? themes[0];
-
-  const openNaming = () => {
-    setConfirmDelete(false);
-    setNaming((value) => {
-      if (!value) setName("");
-      return !value;
-    });
-  };
-
-  return (
-    <div className="flex shrink-0 items-center justify-between gap-[8px] border-t border-border px-[14px] py-[10px]">
-      <div className="flex items-center gap-[4px]">
-        <button type="button" disabled={!canUndo} onClick={undoDesign} className={ICON_ACTION} aria-label="Undo">
-          <Undo2 className="size-3.5" />
-        </button>
-        <button type="button" disabled={!canRedo} onClick={redoDesign} className={ICON_ACTION} aria-label="Redo">
-          <Redo2 className="size-3.5" />
-        </button>
-        <button type="button" disabled={!dirty} onClick={resetActiveTheme} className={ICON_ACTION} aria-label="Reset theme">
-          <RotateCcw className="size-3.5" />
-        </button>
-      </div>
-      {confirmDelete ? (
-        <div className="flex items-center gap-[6px]">
-          <span className="text-[12px] text-foreground">Delete {active.name}?</span>
-          <button
-            type="button"
-            onClick={() => {
-              deleteTheme(active.id);
-              setConfirmDelete(false);
-            }}
-            className={cn(ACTION, "bg-destructive text-white")}
-          >
-            Delete
-          </button>
-          <button type="button" onClick={() => setConfirmDelete(false)} className={cn(ACTION, "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <div className="flex flex-wrap justify-end gap-[6px]">
-          <button
-            type="button"
-            disabled={active.builtin}
-            onClick={() => {
-              setNaming(false);
-              setConfirmDelete(true);
-            }}
-            className={cn(ACTION, "text-muted-foreground hover:bg-muted hover:text-foreground")}
-          >
-            Delete
-          </button>
-          <button type="button" onClick={openNaming} className={cn(ACTION, "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-            New theme
-          </button>
-          <button
-            type="button"
-            disabled={!dirty}
-            onClick={applyTheme}
-            className={cn(ACTION, dirty ? "bg-foreground text-background" : "text-muted-foreground")}
-          >
-            Save
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ThemeBar({ naming, setNaming, setConfirmDelete, name, setName }: ThemeActions & { name: string; setName: (value: string) => void }) {
+function ThemeField({ naming, setNaming, setConfirmDelete, name, setName }: ThemeActions) {
   const { activeId, themes, dirty } = useThemes();
 
   const choose = (id: string) => {
@@ -450,47 +445,114 @@ function ThemeBar({ naming, setNaming, setConfirmDelete, name, setName }: ThemeA
   };
 
   return (
-    <div className="flex shrink-0 flex-col gap-[8px] border-b border-border px-[14px] py-[12px]">
-      <div className="flex items-baseline justify-between gap-[8px]">
-        <label htmlFor="design-theme" className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
-          Theme
-        </label>
-        {dirty ? <span className="text-[11px] text-foreground">Edited</span> : null}
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Theme</span>
+        {dirty ? (
+          <AnimatedBadge status="warning" size="sm" showIcon={false}>
+            Edited
+          </AnimatedBadge>
+        ) : null}
       </div>
-      <select
-        id="design-theme"
-        value={activeId}
-        onChange={(event) => choose(event.target.value)}
-        className={cn("h-[32px] w-full border border-border bg-background px-[8px] text-[12px] text-foreground", FIELD)}
-      >
-        {themes.map((theme) => (
-          <option key={theme.id} value={theme.id}>
-            {theme.builtin ? theme.name : `${theme.name} · saved`}
-          </option>
-        ))}
-      </select>
+      <Select value={activeId} onValueChange={choose}>
+        <SelectTrigger>
+          <SelectValue placeholder="Theme" />
+        </SelectTrigger>
+        <SelectContent>
+          {themes.map((theme) => (
+            <SelectItem key={theme.id} value={theme.id}>
+              {theme.builtin ? theme.name : `${theme.name} · saved`}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {naming ? (
-        <form onSubmit={addTheme} className="flex flex-col gap-[6px]">
-          <div className="flex gap-[6px]">
-            <input
-              autoFocus
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Theme name"
-              maxLength={40}
-              aria-label="Theme name"
-              className={cn("h-[32px] min-w-0 flex-1 border border-border bg-background px-[8px] text-[12px] text-foreground", FIELD)}
-            />
-            <button type="submit" disabled={!name.trim()} className={cn(ACTION, "bg-primary text-primary-foreground")}>
-              Create
-            </button>
+        <form onSubmit={addTheme} className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Input label="Theme name" value={name} onChange={setName} maxLength={40} autoFocus />
           </div>
-          <p className="text-[11px] leading-[1.4] text-muted-foreground">
-            Saves the colors, type, space, and radius on screen. Light and dark are both included.
-          </p>
+          <Button type="submit" size="sm" disabled={!name.trim()}>
+            Create
+          </Button>
         </form>
       ) : null}
     </div>
+  );
+}
+
+function PlaygroundFooter({ setNaming, confirmDelete, setConfirmDelete, setName }: ThemeActions) {
+  const { activeId, themes, dirty } = useThemes();
+  const { canUndo, canRedo } = useDesignHistory();
+  const active = themes.find((theme) => theme.id === activeId) ?? themes[0];
+
+  const openNaming = () => {
+    setConfirmDelete(false);
+    setNaming((value) => {
+      if (!value) setName("");
+      return !value;
+    });
+  };
+
+  return (
+    <CardFooter className="justify-between border-t border-border py-3">
+      <div className="flex items-center gap-1">
+        <Tooltip content="Undo">
+          <Button type="button" variant="ghost" size="icon" disabled={!canUndo} aria-label="Undo" onClick={undoDesign}>
+            <Undo2 className="size-4" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Redo">
+          <Button type="button" variant="ghost" size="icon" disabled={!canRedo} aria-label="Redo" onClick={redoDesign}>
+            <Redo2 className="size-4" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Reset theme">
+          <Button type="button" variant="ghost" size="icon" disabled={!dirty} aria-label="Reset theme" onClick={resetActiveTheme}>
+            <RotateCcw className="size-4" />
+          </Button>
+        </Tooltip>
+      </div>
+      {confirmDelete ? (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-foreground">Delete {active.name}?</span>
+          <Button
+            type="button"
+            size="sm"
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={() => {
+              deleteTheme(active.id);
+              setConfirmDelete(false);
+            }}
+          >
+            Delete
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap justify-end gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={active.builtin}
+            onClick={() => {
+              setNaming(false);
+              setConfirmDelete(true);
+            }}
+          >
+            Delete
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={openNaming}>
+            New theme
+          </Button>
+          <Button type="button" size="sm" disabled={!dirty} onClick={applyTheme} className="disabled:opacity-40">
+            Save
+          </Button>
+        </div>
+      )}
+    </CardFooter>
   );
 }
 
@@ -519,202 +581,101 @@ export function DesignPlayground() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState<Section>("color");
   const [naming, setNaming] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [themeName, setThemeName] = useState("");
-  const themeActions = { naming, setNaming, confirmDelete, setConfirmDelete };
+  const themeActions = { naming, setNaming, confirmDelete, setConfirmDelete, name: themeName, setName: setThemeName };
   const mode = resolvedTheme === "dark" ? "dark" : "light";
   const palette = design[mode];
   const radius = radiusSteps(design.radius);
-
   const setPalette = (patch: Partial<Palette>) => patchDesign({ [mode]: { ...palette, ...patch } });
   const setHero = (patch: Partial<HeroConfig>) => patchDesign({ hero: { ...design.hero, ...patch } });
 
   return (
-    <div className="fixed right-[20px] bottom-[20px] z-40 flex w-[min(400px,calc(100vw-32px))] flex-col items-end gap-[8px]">
+    <div className="fixed right-5 bottom-5 z-40 flex w-[min(24rem,calc(100vw-2rem))] flex-col items-end gap-2">
       {open ? (
-        <aside className="flex max-h-[min(52rem,calc(100svh-4.5rem))] w-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-popover text-popover-foreground shadow-xl">
-          <div className="flex shrink-0 items-start justify-between gap-[12px] border-b border-border px-[14px] py-[12px]">
-            <p className="text-[13px] font-medium">Playground</p>
-            <div className="flex items-center gap-[6px]">
-              <div className={cn("flex bg-muted p-[2px] text-[11px]", FIELD)}>
-                {(["light", "dark"] as const).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    aria-pressed={mode === item}
-                    onClick={() => setTheme(item)}
-                    className={cn(
-                      "inline-flex h-[24px] items-center px-[8px] capitalize",
-                      FIELD,
-                      mode === item ? "bg-background text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className={cn("inline-flex size-[28px] items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground", FIELD)}
-                aria-label="Close playground"
-              >
+        <Card size="compact" className="flex max-h-[min(52rem,calc(100svh-4.5rem))] w-full flex-col gap-0 py-0 shadow-xl">
+          <CardHeader className="border-b border-border py-3">
+            <CardTitle>Playground</CardTitle>
+            <CardAction className="gap-1">
+              <ThemeToggle
+                variant="circle"
+                className="size-8 rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted hover:text-foreground"
+                iconClassName="size-4"
+              />
+              <Button type="button" variant="ghost" size="icon" aria-label="Close playground" onClick={() => setOpen(false)}>
                 <X className="size-4" />
-              </button>
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="relative z-30 shrink-0 border-b border-border px-4 py-3">
+              <ThemeField {...themeActions} />
             </div>
-          </div>
-          <ThemeBar {...themeActions} name={themeName} setName={setThemeName} />
-          <div className="flex shrink-0 items-center gap-[4px] border-b border-border px-[10px] py-[8px]">
-            {SECTIONS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={section === item.id}
-                onClick={() => setSection(item.id)}
-                className={cn(
-                  "inline-flex h-[28px] shrink-0 items-center rounded-[var(--radius-control)] px-[10px] text-[12px] leading-none",
-                  section === item.id ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted",
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-[14px] py-[14px]">
-            {section === "color" ? (
-              <>
-              {COLOR_GROUPS.map((group) => (
-                <section key={group.title} className="flex flex-col gap-[10px]">
-                  <Heading>{group.title}</Heading>
-                  {group.keys.map((key) => (
-                    <ColorRow key={key} name={key} value={palette[key]} onChange={(value) => setPalette({ [key]: value })} />
-                  ))}
-                </section>
-              ))}
-              </>
-            ) : null}
-            {section === "type" ? <TypeSection /> : null}
-            {section === "icons" ? <IconSection /> : null}
-            {section === "space" ? (
-              <section className="flex flex-col gap-[12px]">
-                <p className="text-[12px] leading-[1.45] text-muted-foreground">
-                  Page is the outer padding. Section is the gap between blocks. Control is the gap between buttons. The base unit scales Tailwind spacing.
-                </p>
-                <Slider
-                  id="space-base"
-                  label="Base unit"
-                  value={design.space.base}
-                  min={2}
-                  max={8}
-                  step={1}
-                  display={`${design.space.base} px`}
-                  onChange={(base) => patchDesign({ space: { ...design.space, base } })}
-                />
-                <Slider
-                  id="space-page"
-                  label="Page"
-                  value={design.space.page}
-                  min={12}
-                  max={64}
-                  step={1}
-                  display={`${design.space.page} px`}
-                  onChange={(page) => patchDesign({ space: { ...design.space, page } })}
-                />
-                <Slider
-                  id="space-section"
-                  label="Sections"
-                  value={design.space.section}
-                  min={8}
-                  max={64}
-                  step={1}
-                  display={`${design.space.section} px`}
-                  onChange={(sectionGap) => patchDesign({ space: { ...design.space, section: sectionGap } })}
-                />
-                <Slider
-                  id="space-control"
-                  label="Controls"
-                  value={design.space.control}
-                  min={4}
-                  max={24}
-                  step={1}
-                  display={`${design.space.control} px`}
-                  onChange={(control) => patchDesign({ space: { ...design.space, control } })}
-                />
-              </section>
-            ) : null}
-            {section === "radius" ? (
-              <section className="flex flex-col gap-[12px]">
-                <p className="text-[12px] leading-[1.45] text-muted-foreground">
-                  One base and one ratio. Buttons, inputs, and the Playground button use the xl step. Cards and this popup use 2xl. Fields in here use lg.
-                </p>
-                <Slider
-                  id="radius-base"
-                  label="Base"
-                  value={design.radius.base}
-                  min={0}
-                  max={32}
-                  step={1}
-                  display={`${Math.round(radius.lg)} px`}
-                  onChange={(base) => patchDesign({ radius: { ...design.radius, base } })}
-                />
-                <Slider
-                  id="radius-ratio"
-                  label="Ratio"
-                  value={design.radius.ratio}
-                  min={1.15}
-                  max={2}
-                  step={0.01}
-                  display={design.radius.ratio.toFixed(2)}
-                  onChange={(ratio) => patchDesign({ radius: { ...design.radius, ratio } })}
-                />
-                <div className="flex flex-col gap-[8px] border-t border-border pt-[12px]">
-                  <div className="flex items-center justify-between gap-[12px]">
-                    <span className="text-[12px] text-foreground">Button</span>
-                    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">xl {Math.round(radius.xl)} px</span>
+            <Tabs value={section} onValueChange={(value) => setSection(value as Section)} variant="underline" className="flex min-h-0 flex-1 flex-col">
+              <TabsList className="px-2">
+                {SECTIONS.map((item) => (
+                  <TabsTrigger key={item.id} value={item.id}>
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <CardContent className="min-h-0 flex-1 overflow-y-auto py-4">
+                <TabsContent value="color" className="flex flex-col gap-5">
+                  {section === "color"
+                    ? COLOR_GROUPS.map((group) => (
+                        <section key={group.title} className="flex flex-col gap-3">
+                          <GroupTitle>{group.title}</GroupTitle>
+                          {group.keys.map((key) => (
+                            <ColorRow key={key} name={key} value={palette[key]} onChange={(value) => setPalette({ [key]: value })} />
+                          ))}
+                        </section>
+                      ))
+                    : null}
+                </TabsContent>
+                <TabsContent value="type">{section === "type" ? <TypeSection /> : null}</TabsContent>
+                <TabsContent value="icons">{section === "icons" ? <IconSection /> : null}</TabsContent>
+                <TabsContent value="space" className="flex flex-col gap-4">
+                  {section === "space" ? (
+                    <>
+                      <Slider id="space-base" label="Base unit" value={design.space.base} min={2} max={8} step={1} display={`${design.space.base} px`} onChange={(base) => patchDesign({ space: { ...design.space, base } })} />
+                      <Slider id="space-page" label="Page" value={design.space.page} min={12} max={64} step={1} display={`${design.space.page} px`} onChange={(page) => patchDesign({ space: { ...design.space, page } })} />
+                      <Slider id="space-section" label="Sections" value={design.space.section} min={8} max={64} step={1} display={`${design.space.section} px`} onChange={(sectionGap) => patchDesign({ space: { ...design.space, section: sectionGap } })} />
+                      <Slider id="space-control" label="Controls" value={design.space.control} min={4} max={24} step={1} display={`${design.space.control} px`} onChange={(control) => patchDesign({ space: { ...design.space, control } })} />
+                    </>
+                  ) : null}
+                </TabsContent>
+                <TabsContent value="radius" className="flex flex-col gap-4">
+                  {section === "radius" ? (
+                    <>
+                  <Slider id="radius-base" label="Base" value={design.radius.base} min={0} max={32} step={1} display={`${Math.round(radius.lg)} px`} onChange={(base) => patchDesign({ radius: { ...design.radius, base } })} />
+                  <Slider id="radius-ratio" label="Ratio" value={design.radius.ratio} min={1.15} max={2} step={0.01} display={design.radius.ratio.toFixed(2)} onChange={(ratio) => patchDesign({ radius: { ...design.radius, ratio } })} />
+                  <div className="flex flex-col gap-3 border-t border-border pt-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Button</span>
+                      <span className="font-mono text-xs text-muted-foreground tabular-nums">xl {Math.round(radius.xl)} px</span>
+                    </div>
+                    <Button type="button" size="sm" className="w-fit">
+                      New experiment
+                    </Button>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Card</span>
+                      <span className="font-mono text-xs text-muted-foreground tabular-nums">2xl {Math.round(radius.xl2)} px</span>
+                    </div>
+                    <div className="h-12 border border-border bg-card" style={{ borderRadius: radius.xl2 }} />
                   </div>
-                  <button type="button" className={cn("inline-flex h-[36px] items-center bg-primary px-[14px] text-[13px] font-medium text-primary-foreground", CONTROL)}>
-                    New experiment
-                  </button>
-                  <div className="flex items-center justify-between gap-[12px]">
-                    <span className="text-[12px] text-foreground">Card and popup</span>
-                    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">2xl {Math.round(radius.xl2)} px</span>
-                  </div>
-                  <div className="h-[48px] border border-border bg-card" style={{ borderRadius: radius.xl2 }} />
-                  <div className="flex items-center justify-between gap-[12px]">
-                    <span className="text-[12px] text-foreground">Field</span>
-                    <span className="font-mono text-[11px] text-muted-foreground tabular-nums">lg {Math.round(radius.lg)} px</span>
-                  </div>
-                  <div className={cn("h-[32px] border border-border bg-background", FIELD)} />
-                </div>
-              </section>
-            ) : null}
-            {section === "hero" ? (
-              <>
-                <p className="text-[12px] leading-[1.45] text-muted-foreground">
-                  Only the landing image. Switching or resetting a theme keeps the hero. Reset in this section restores the default image.
-                </p>
-                <section className="flex flex-col gap-[12px]">
+                    </>
+                  ) : null}
+                </TabsContent>
+                <TabsContent value="hero" className="flex flex-col gap-5">
+                  {section === "hero" ? (
+                    <>
                   <div className="flex items-center justify-between">
-                    <Heading>Grid</Heading>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={design.hero.squares}
-                      onClick={() => setHero({ squares: !design.hero.squares })}
-                      className={cn("relative h-[20px] w-[36px] rounded-full", design.hero.squares ? "bg-foreground" : "bg-border-strong")}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-[2px] size-[16px] rounded-full bg-background",
-                          design.hero.squares ? "left-[18px]" : "left-[2px]",
-                        )}
-                      />
-                      <span className="sr-only">Show grid</span>
-                    </button>
+                    <GroupTitle>Grid</GroupTitle>
+                    <Switch checked={design.hero.squares} onCheckedChange={(squares) => setHero({ squares })} ariaLabel="Show grid" />
                   </div>
                   {SQUARE_FIELDS.map((field) => (
                     <Slider
@@ -729,9 +690,7 @@ export function DesignPlayground() {
                       onChange={(value) => setHero({ [field.key]: value })}
                     />
                   ))}
-                </section>
-                <section className="flex flex-col gap-[12px] border-t border-border pt-[14px]">
-                  <Heading>Image</Heading>
+                  <GroupTitle>Image</GroupTitle>
                   {IMAGE_FIELDS.map((field) => (
                     <Slider
                       key={field.key}
@@ -745,22 +704,19 @@ export function DesignPlayground() {
                       onChange={(value) => setHero({ [field.key]: value })}
                     />
                   ))}
-                </section>
-              </>
-            ) : null}
+                    </>
+                  ) : null}
+                </TabsContent>
+              </CardContent>
+            </Tabs>
           </div>
-          <PlaygroundFooter {...themeActions} setName={setThemeName} />
-        </aside>
+          <PlaygroundFooter {...themeActions} />
+        </Card>
       ) : null}
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className={cn("inline-flex h-[40px] items-center gap-[8px] bg-foreground px-[14px] text-[14px] font-medium text-background", CONTROL)}
-      >
+      <Button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <SlidersHorizontal className="size-4" />
         Playground
-      </button>
+      </Button>
     </div>
   );
 }

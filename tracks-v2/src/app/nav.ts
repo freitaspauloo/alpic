@@ -1,6 +1,5 @@
-import type { LucideIcon } from "lucide-react";
 import type { SidebarResource } from "@/components/agents/ai-sidebar";
-import { DEFAULT_ICON_SETTINGS, NAV_ICON_SLOTS, resolveNavIcon } from "@/design/icons";
+import { DEFAULT_ICON_SETTINGS, NAV_ICON_SLOTS, resolveNavIcon, type AppIcon } from "@/design/icons";
 import type { State } from "@/data";
 
 /** The whole sidebar tree. Account pages (members, API keys, billing, settings) live in the user menu instead. */
@@ -28,7 +27,7 @@ export const NAV_PATHS: Record<string, string> = {
 };
 
 /** Default nav icons before theme overrides. Prefer `resolveNavIcon` with `useDesign().icons`. */
-export const NAV_ICONS: Record<string, LucideIcon> = Object.fromEntries(
+export const NAV_ICONS: Record<string, AppIcon> = Object.fromEntries(
   NAV_ICON_SLOTS.map(({ id }) => [id, resolveNavIcon(id, DEFAULT_ICON_SETTINGS)]),
 );
 
