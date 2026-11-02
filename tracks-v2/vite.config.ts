@@ -115,6 +115,7 @@ function designStore(): import("vite").Plugin {
           overrides?: unknown;
           removed?: unknown;
           revision?: unknown;
+          ship?: unknown;
         };
         try {
           next = JSON.parse(body);
@@ -181,8 +182,19 @@ function designStore(): import("vite").Plugin {
           revision: Math.max(prevRev, nextRev),
         };
         const saved = JSON.stringify(merged, null, 2) + "\n";
-        fs.writeFileSync(designFile, saved);
-        fs.writeFileSync(shippedThemeFile, saved);
+        try {
+          fs.writeFileSync(designFile, saved);
+          // Only an explicit save writes the file the app imports. Writing it on every
+          // sync reloads the page, which syncs again, until the file lock kills the server.
+          if (next.ship === true) {
+            const current = fs.existsSync(shippedThemeFile) ? fs.readFileSync(shippedThemeFile, "utf8") : "";
+            if (current !== saved) fs.writeFileSync(shippedThemeFile, saved);
+          }
+        } catch {
+          res.statusCode = 500;
+          res.end();
+          return;
+        }
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify(merged));
       });

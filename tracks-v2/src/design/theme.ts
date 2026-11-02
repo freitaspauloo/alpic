@@ -538,7 +538,10 @@ function writeLibrary() {
   );
 }
 
-function persistLibrary() {
+let shipOnNextPush = false;
+
+function persistLibrary(ship = false) {
+  if (ship) shipOnNextPush = true;
   if (!applyingRemote) {
     revision = Date.now();
     editedAt = revision;
@@ -586,7 +589,7 @@ export function saveTheme(name: string) {
   };
   library = { ...library, activeId: saved.id, custom: [...library.custom, saved] };
   libraryView = null;
-  persistLibrary();
+  persistLibrary(true);
   emit();
   return saved.id;
 }
@@ -605,7 +608,7 @@ export function applyTheme() {
     library = { ...library, overrides: { ...library.overrides, [library.activeId]: snapshot } };
   }
   libraryView = null;
-  persistLibrary();
+  persistLibrary(true);
   emit();
 }
 
@@ -623,7 +626,7 @@ export function deleteTheme(id: string) {
     custom: library.custom.filter((theme) => theme.id !== id),
   };
   libraryView = null;
-  persistLibrary();
+  persistLibrary(true);
   if (wasActive) {
     const tracks = allThemes().find((theme) => theme.id === "tracks") ?? BUILT_IN_THEMES[0];
     setDesign({ ...themeDesign(tracks.design), hero: { ...state.hero } });
@@ -782,7 +785,7 @@ function recordStep() {
   future.length = 0;
 }
 
-function sharedPayload() {
+function sharedPayload(ship = false) {
   return {
     design: state,
     activeId: library.activeId,
@@ -790,6 +793,7 @@ function sharedPayload() {
     overrides: library.overrides,
     removed: [...removedIds],
     revision,
+    ...(ship ? { ship: true } : {}),
   };
 }
 
@@ -802,7 +806,8 @@ function schedulePush() {
 }
 
 async function pushShared() {
-  const body = JSON.stringify(sharedPayload());
+  const ship = shipOnNextPush;
+  const body = JSON.stringify(sharedPayload(ship));
   if (body === lastPushed) return true;
   lastPushed = body;
   try {
@@ -815,6 +820,7 @@ async function pushShared() {
       lastPushed = "";
       return false;
     }
+    if (ship) shipOnNextPush = false;
     return true;
   } catch {
     lastPushed = "";
