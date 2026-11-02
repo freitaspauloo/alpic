@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from "react";
-import { DEFAULT_HERO, loadHeroConfig, type HeroConfig } from "@/pages/landing-hero";
+import { DEFAULT_HERO, type HeroConfig } from "@/pages/landing-hero";
 import { DEFAULT_ICON_SETTINGS, type IconSettings, mergeIconSettings } from "./icons";
 import { installUploadedFonts, loadSharedFonts } from "./fonts";
+import shippedTheme from "./shipped-theme.json";
 
 export type { IconSettings } from "./icons";
 
@@ -471,17 +472,40 @@ function sanitizeOverrides(value: unknown): Record<string, ThemeDesign> {
   return overrides;
 }
 
+type StoredLibrary = {
+  design?: unknown;
+  activeId?: unknown;
+  custom?: unknown;
+  overrides?: unknown;
+  removed?: unknown;
+  revision?: unknown;
+};
+
+const shipped = shippedTheme as StoredLibrary;
+
+function shippedRevision() {
+  return typeof shipped.revision === "number" ? shipped.revision : 0;
+}
+
+function rememberRemoved(value: unknown) {
+  if (!Array.isArray(value)) return;
+  value.forEach((id) => {
+    if (typeof id === "string") removedIds.add(id);
+  });
+}
+
+function takeLibrary(raw: StoredLibrary): ThemeLibrary {
+  const custom = Array.isArray(raw.custom) ? raw.custom.flatMap((item) => sanitizeSaved(item) ?? []) : [];
+  const ids = new Set([...BUILT_IN_IDS, ...custom.map((theme) => theme.id)]);
+  const activeId = typeof raw.activeId === "string" && ids.has(raw.activeId) ? raw.activeId : "tracks";
+  rememberRemoved(raw.removed);
+  if (typeof raw.revision === "number") revision = Math.max(revision, raw.revision);
+  return { activeId, custom, overrides: sanitizeOverrides(raw.overrides) };
+}
+
 function readLibrary(): ThemeLibrary {
   try {
-    const raw = JSON.parse(localStorage.getItem(THEMES_KEY) || "") as {
-      activeId?: unknown;
-      custom?: unknown;
-      overrides?: unknown;
-    };
-    const custom = Array.isArray(raw.custom) ? raw.custom.flatMap((item) => sanitizeSaved(item) ?? []) : [];
-    const ids = new Set([...BUILT_IN_IDS, ...custom.map((theme) => theme.id)]);
-    const activeId = typeof raw.activeId === "string" && ids.has(raw.activeId) ? raw.activeId : "tracks";
-    return { activeId, custom, overrides: sanitizeOverrides(raw.overrides) };
+    return takeLibrary(JSON.parse(localStorage.getItem(THEMES_KEY) || "") as StoredLibrary);
   } catch {
     return { activeId: "tracks", custom: [], overrides: {} };
   }
@@ -787,8 +811,11 @@ async function pushShared() {
       headers: { "content-type": "application/json" },
       body,
     });
-    if (!res.ok) lastPushed = "";
-    return res.ok;
+    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) {
+      lastPushed = "";
+      return false;
+    }
+    return true;
   } catch {
     lastPushed = "";
     return false;
@@ -885,7 +912,8 @@ async function pullShared() {
   const seen = revision;
   try {
     const res = await fetch("/api/design", { cache: "no-store" });
-    if (!res.ok || seen !== revision || Date.now() - editedAt < 800) return;
+    const type = res.headers.get("content-type") ?? "";
+    if (!res.ok || !type.includes("json") || seen !== revision || Date.now() - editedAt < 800) return;
     const text = await res.text();
     if (!text || text === "{}") {
       if (hadStored) void pushShared();
@@ -943,11 +971,26 @@ export function subscribeDesign(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+function adoptShippedTheme() {
+  state = sanitizeDesign(shipped.design);
+  revision = 0;
+  library = takeLibrary(shipped);
+  revision = shippedRevision();
+  localStorage.setItem(KEY, JSON.stringify(state));
+  writeLibrary();
+}
+
 export function hydrateDesign() {
   hadStored = Boolean(localStorage.getItem(KEY) || localStorage.getItem(THEMES_KEY));
   const stored = readStored();
-  state = stored ?? { ...DEFAULT_DESIGN, hero: loadHeroConfig() };
   library = readLibrary();
+  // The shipped file is the theme that was saved. A newer edit in this browser wins.
+  if (!stored || shippedRevision() > revision) {
+    adoptShippedTheme();
+    hadStored = true;
+  } else {
+    state = stored;
+  }
   libraryView = null;
   const saved = localStorage.getItem("tracks-v2:theme");
   mode = saved === "dark" ? "dark" : "light";

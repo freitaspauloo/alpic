@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 const designFile = path.resolve(__dirname, ".design-store.json");
+const shippedThemeFile = path.resolve(__dirname, "src/design/shipped-theme.json");
 const fontsDir = path.resolve(__dirname, ".fonts");
 const fontIndex = path.resolve(fontsDir, "index.json");
 
@@ -98,7 +99,8 @@ function designStore(): import("vite").Plugin {
   const handle: Connect.NextHandleFunction = (req, res, next) => {
     if (req.method === "GET") {
       res.setHeader("Content-Type", "application/json");
-      res.end(fs.existsSync(designFile) ? fs.readFileSync(designFile, "utf8") : "{}");
+      const file = fs.existsSync(designFile) ? designFile : shippedThemeFile;
+      res.end(fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "{}");
       return;
     }
     if (req.method === "PUT") {
@@ -178,7 +180,9 @@ function designStore(): import("vite").Plugin {
           removed: [...removed],
           revision: Math.max(prevRev, nextRev),
         };
-        fs.writeFileSync(designFile, JSON.stringify(merged));
+        const saved = JSON.stringify(merged, null, 2) + "\n";
+        fs.writeFileSync(designFile, saved);
+        fs.writeFileSync(shippedThemeFile, saved);
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify(merged));
       });
