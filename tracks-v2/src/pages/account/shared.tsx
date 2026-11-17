@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Check, Copy, MoreHorizontal, type LucideIcon } from "lucide-react";
-import { MenuAction } from "@/app/menu";
+import { MenuAction, menuSurface } from "@/app/menu";
 import { useToast } from "@/app/toast";
 import { ActionSwapButton, type ActionSwapButtonSize, type ActionSwapButtonVariant } from "@/components/motion/action-swap";
 import { Button } from "@/components/motion/button/base";
@@ -11,7 +11,7 @@ import {
   CenterMorphModalClose,
   CenterMorphModalContent,
 } from "@/components/motion/center-morph-modal";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -125,13 +125,13 @@ export type RowMenuItem = { label: string; icon: LucideIcon; onSelect: () => voi
 export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <MorphPopover open={open} onOpenChange={setOpen}>
-      <MorphPopoverTrigger>
+    <Popover open={open} onOpenChange={setOpen} side="bottom" align="end" panelRadius={12}>
+      <PopoverTrigger>
         <Button variant="ghost" size="icon" aria-label={label}>
           <MoreHorizontal aria-hidden="true" className="size-4" />
         </Button>
-      </MorphPopoverTrigger>
-      <MorphPopoverContent side="bottom" align="end" radius={12} className="w-48 p-1.5">
+      </PopoverTrigger>
+      <PopoverContent className={cn("w-48 max-w-none p-1.5", menuSurface)}>
         {items.map((item) => (
           <MenuAction
             key={item.label}
@@ -144,8 +144,8 @@ export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] 
             {item.label}
           </MenuAction>
         ))}
-      </MorphPopoverContent>
-    </MorphPopover>
+      </PopoverContent>
+    </Popover>
   );
 }
 

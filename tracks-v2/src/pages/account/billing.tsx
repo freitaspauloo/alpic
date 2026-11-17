@@ -92,7 +92,7 @@ export function Billing() {
           <span className="flex min-w-0 items-center gap-3">
             <span
               className={cn(
-                "grid size-7 shrink-0 place-items-center rounded-lg bg-muted",
+                "grid size-7 shrink-0 place-items-center rounded-lg border border-border bg-muted",
                 item.cents > 0 ? "text-success" : "text-muted-foreground",
               )}
             >

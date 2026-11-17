@@ -3,6 +3,7 @@ import { useTheme } from "next-themes";
 import { newId, slugify } from "./format";
 import { DEFAULT_AGENT, TODAY, emptySources, emptyTraffic, sampleTraffic, seed } from "./seed";
 import type {
+  AgentSpec,
   Experiment,
   McpAuth,
   NewRunInput,
@@ -33,8 +34,13 @@ export type Actions = {
   acceptInvitation: (invitationId: string) => Result<{ orgId: string }>;
   declineInvitation: (invitationId: string) => void;
 
-  /** Returns the new experiment id. */
-  createExperiment: (orgId: string, name: string, scenarios: Scenario[]) => string;
+  /** Returns the new experiment id. Agent and repository default to Claude and none. */
+  createExperiment: (
+    orgId: string,
+    name: string,
+    scenarios: Scenario[],
+    options?: { agent?: Pick<AgentSpec, "name" | "model" | "harness">; repositoryId?: string | null },
+  ) => string;
   /** Saves the whole experiment and bumps its version. */
   updateExperiment: (experiment: Experiment) => void;
   removeExperiment: (experimentId: string) => void;
@@ -184,15 +190,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           notice: "Invitation declined.",
         })),
 
-      createExperiment: (orgId, name, scenarios) => {
+      createExperiment: (orgId, name, scenarios, options) => {
         const experimentId = newId("exp");
+        const agent = options?.agent ?? DEFAULT_AGENT;
         const experiment: Experiment = {
           id: experimentId,
           orgId,
           name: name.trim() || "Untitled experiment",
           scenarios,
-          agents: [{ id: newId("ag"), ...DEFAULT_AGENT }],
-          repositoryId: null,
+          agents: [{ id: newId("ag"), name: agent.name, model: agent.model, harness: agent.harness }],
+          repositoryId: options?.repositoryId ?? null,
           runsPerLaunch: Math.max(1, scenarios.length),
           maxSpendCents: 1000,
           version: 1,

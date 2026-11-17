@@ -1,6 +1,29 @@
 @import "tailwindcss";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/instrument-sans";
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/outfit";
+@import "@fontsource-variable/dm-sans";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/figtree";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/sora";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource-variable/newsreader";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/source-serif-4";
+@import "@fontsource-variable/literata";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/ibm-plex-mono";
+@import "@fontsource/ibm-plex-serif/400.css";
+@import "@fontsource/ibm-plex-serif/500.css";
+@import "@fontsource/ibm-plex-serif/600.css";
+@import "@fontsource/ibm-plex-serif/700.css";
+@import "@fontsource/dm-mono";
+@import "@fontsource/space-mono";
 
 /*
  * beUI theme tokens — https://beui.dev/theme.css (Theme setup, option 2).
@@ -14,9 +37,10 @@
     --background: oklch(99% 0 0);
     --foreground: oklch(15% 0 0);
     --card: oklch(97% 0 0);
-    --muted-foreground: oklch(50% 0 0);
-    --border: oklch(15% 0 0 / 0.06);
+    --muted-foreground: oklch(42% 0 0);
+    --border: oklch(15% 0 0 / 0.12);
     /* beUI extensions */
+    --border-raised: oklch(15% 0 0 / 0.12);
     --border-strong: oklch(15% 0 0 / 0.12);
     --accent-fg: oklch(15% 0 0);
     --neon: oklch(80% 0.22 145);
@@ -36,7 +60,7 @@
     --primary-foreground: #ffffff;
     --secondary: var(--card);
     --secondary-foreground: var(--foreground);
-    --muted: var(--card);
+    --muted: oklch(94% 0 0);
     --accent: oklch(72% 0.18 195);
     --accent-foreground: var(--accent-fg);
     --destructive: var(--danger);
@@ -48,9 +72,15 @@
     --text-section: 19px;
     --text-body: 15px;
     --text-eyebrow: 11px;
+    --text-mono: 11px;
+    --font-weight: 400;
+    --font-weight-display: 500;
+    --leading-body: 1.5;
     --leading-display: 1.02;
+    --leading-title: 1.2;
     --tracking-display: -0.04em;
     --tracking-title: -0.028em;
+    --tracking-body: 0em;
     --tracking-eyebrow: 0.16em;
     --space-page: 32px;
     --space-section: 32px;
@@ -61,14 +91,17 @@
     --radius-xl: 12px;
     --radius-2xl: 18px;
     --radius-3xl: 27px;
+    --radius-control: 12px;
 }
 
 .dark {
     --background: #151515;
     --foreground: oklch(96% 0 0);
     --card: #1c1c1c;
+    --muted: var(--card);
     --muted-foreground: oklch(62% 0 0);
     --border: rgb(255 255 255 / 0.05);
+    --border-raised: rgb(255 255 255 / 0.16);
     --border-strong: rgb(255 255 255 / 0.1);
     --accent: oklch(80% 0.18 195);
     --accent-fg: #151515;
@@ -84,6 +117,7 @@
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
     --color-border: var(--border);
+    --color-border-raised: var(--border-raised);
     --color-border-strong: var(--border-strong);
     --color-neon: var(--neon);
     --color-violet: var(--violet);
@@ -160,6 +194,13 @@
     }
 }
 
+/* The canvas line is tuned for the darker field. On a lighter gray it drops
+   out, so cards, tags, and filled icons use the raised line instead. */
+:is(.bg-card, .bg-muted, .bg-secondary, .bg-popover) {
+    --border: var(--border-raised);
+    --input: var(--border-raised);
+}
+
 @layer base {
     * {
         border-color: var(--border);
@@ -176,6 +217,9 @@
         background: var(--background);
         color: var(--foreground);
         font-family: var(--font-sans);
+        font-weight: var(--font-weight);
+        line-height: var(--leading-body);
+        letter-spacing: var(--tracking-body);
         -webkit-font-smoothing: antialiased;
     }
 }

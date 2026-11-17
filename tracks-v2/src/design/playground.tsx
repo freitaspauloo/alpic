@@ -1,51 +1,157 @@
-import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { Redo2, RotateCcw, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
-import { DEFAULT_HERO, IMAGE_FIELDS, SQUARE_FIELDS, type HeroConfig } from "@/pages/landing-hero";
+import { Alert, AlertDescription } from "@/components/motion/alert";
+import { AnimatedBadge } from "@/components/motion/animated-badge";
+import { Button } from "@/components/motion/button/base";
+import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/motion/card";
+import { Collapsible, CollapsibleContent, CollapsibleIndicator, CollapsibleTrigger } from "@/components/motion/collapsible";
+import {
+  ColorPicker,
+  ColorPickerAlpha,
+  ColorPickerArea,
+  ColorPickerChannels,
+  ColorPickerContent,
+  ColorPickerEyeDropper,
+  ColorPickerHexInput,
+  ColorPickerHue,
+  ColorPickerSwatch,
+  ColorPickerTrigger,
+  formatHex,
+  parseHex,
+} from "@/components/motion/color-picker";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxTrigger,
+  ComboboxValue,
+} from "@/components/motion/combobox";
+import { Input } from "@/components/motion/input";
+import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { RangeSlider } from "@/components/motion/range-slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/motion/select";
+import { Switch } from "@/components/motion/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import { ThemeToggle } from "@/components/motion/theme-toggle";
+import { Tooltip } from "@/components/motion/tooltip";
+import { IMAGE_FIELDS, SQUARE_FIELDS, type HeroConfig } from "@/pages/landing-hero";
+import {
+  ICON_FAMILIES,
+  NAV_ICON_SLOTS,
+  clampWeight,
+  familyUsesStroke,
+  isPixelFamily,
+  resolveIcon,
+  resolveNavIcon,
+  strokeForWeight,
+  weightsFor,
+  type AppIcon,
+  type IconFamily,
+  type IconWeight,
+} from "./icons";
+import { MONO_FONTS, SANS_FONTS, fontStack, uploadFont, useUploadedFonts } from "./fonts";
 import {
   ALPHA_COLORS,
   COLOR_GROUPS,
   COLOR_LABELS,
-  MONO_FONTS,
-  SANS_FONTS,
+  applyTheme,
   deleteTheme,
   patchDesign,
   radiusSteps,
   readColor,
+  redoDesign,
   resetActiveTheme,
-  resetEverything,
   saveTheme,
+  scaleRoles,
   selectTheme,
-  updateActiveTheme,
+  undoDesign,
+  useDesignHistory,
   type Palette,
-  typeRoles,
   useDesign,
   useThemes,
   writeColor,
 } from "./theme";
+import { EASE_OUT, SPRING_SWAP } from "@/lib/ease";
+import { cn } from "@/lib/utils";
 
-type Section = "color" | "type" | "space" | "radius" | "hero";
+type Section = "color" | "type" | "icons" | "space" | "radius" | "hero";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "color", label: "Color" },
   { id: "type", label: "Type" },
+  { id: "icons", label: "Icons" },
   { id: "space", label: "Space" },
   { id: "radius", label: "Radius" },
   { id: "hero", label: "Hero" },
 ];
 
-const RANGE =
-  "h-4 w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-px [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-border-strong [&::-webkit-slider-thumb]:mt-[-5px] [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-moz-range-track]:h-px [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-border-strong [&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-foreground";
+const SERIF = new Set(["georgia", "newsreader", "fraunces", "source-serif", "literata", "ibm-plex-serif"]);
+
+function cssColorToPickerValue(raw: string, withAlpha: boolean): string {
+  const { hex, alpha } = readColor(raw);
+  const rgba = parseHex(hex) ?? { r: 0, g: 0, b: 0, a: 1 };
+  return formatHex({ ...rgba, a: withAlpha ? alpha : 1 });
+}
+
+function pickerValueToCss(hex: string): string {
+  const rgba = parseHex(hex);
+  if (!rgba) return hex;
+  const rgb = formatHex({ ...rgba, a: 1 }).slice(0, 7);
+  return writeColor(rgb, rgba.a);
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function GroupTitle({ children }: { children: string }) {
+  return <h2 className="text-xs font-medium tracking-widest text-muted-foreground uppercase">{children}</h2>;
+}
+
+/** One titled block, closed until asked. Opening one closes the others in its list. */
+function TokenGroup({
+  title,
+  open,
+  onOpenChange,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange} className={open ? "z-20" : undefined}>
+      <CollapsibleTrigger className="min-h-9 px-2 text-xs tracking-widest text-muted-foreground uppercase">
+        {title}
+        <CollapsibleIndicator />
+      </CollapsibleTrigger>
+      <CollapsibleContent className={open ? "overflow-visible" : undefined} contentClassName="flex flex-col gap-3 pt-2">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 function Slider({
-  id,
   label,
   value,
   min,
   max,
   step,
   display,
+  disabled,
   onChange,
 }: {
   id: string;
@@ -55,76 +161,397 @@ function Slider({
   max: number;
   step: number;
   display: string;
+  disabled?: boolean;
   onChange: (value: number) => void;
 }) {
+  const steps = max > min && step > 0 ? Math.floor((max - min) / step) : 0;
   return (
-    <div className="grid gap-[6px]">
-      <div className="flex items-baseline justify-between gap-[12px]">
-        <label htmlFor={id} className="text-[12px] text-muted-foreground">
-          {label}
-        </label>
-        <span className="font-mono text-[11px] text-foreground tabular-nums">{display}</span>
-      </div>
-      <input
-        id={id}
-        type="range"
+    <Field label={`${label} · ${display}`}>
+      <RangeSlider
+        aria-label={label}
+        value={value}
         min={min}
         max={max}
         step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className={RANGE}
+        disabled={disabled}
+        showTicks={steps > 0 && steps <= 50}
+        formatValueText={() => display}
+        onValueChange={onChange}
       />
+    </Field>
+  );
+}
+
+function OptionPicker({
+  label,
+  value,
+  options,
+  onValueChange,
+  disabled,
+  strokeWidth,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string; group?: string; icon?: AppIcon }[];
+  onValueChange: (value: string) => void;
+  disabled?: boolean;
+  strokeWidth?: number;
+}) {
+  const groups = [...new Set(options.map((option) => option.group ?? ""))];
+  return (
+    <Field label={label}>
+      <Combobox value={value} onValueChange={onValueChange} disabled={disabled}>
+        <ComboboxTrigger className="h-8 min-w-0 cursor-pointer rounded-[var(--radius-control)]">
+          <ComboboxValue placeholder={label} />
+        </ComboboxTrigger>
+        <ComboboxContent className="z-[10000]">
+          <ComboboxList ariaLabel={label}>
+            {groups.map((group) => (
+              <ComboboxGroup key={group || "all"}>
+                {group ? <ComboboxLabel>{group}</ComboboxLabel> : null}
+                {options
+                  .filter((option) => (option.group ?? "") === group)
+                  .map((option) => {
+                    const Icon = option.icon;
+                    return (
+                      <ComboboxItem key={option.value} value={option.value} textValue={option.label}>
+                        <span className="flex items-center gap-2">
+                          {Icon ? <Icon className="size-4 shrink-0" strokeWidth={strokeWidth} aria-hidden /> : null}
+                          {option.label}
+                        </span>
+                      </ComboboxItem>
+                    );
+                  })}
+              </ComboboxGroup>
+            ))}
+            <ComboboxEmpty>No match.</ComboboxEmpty>
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </Field>
+  );
+}
+
+const COLOR_FORMATS = ["hex", "rgb", "hsl"] as const;
+type ColorFormat = (typeof COLOR_FORMATS)[number];
+
+function ColorRow({
+  name,
+  value,
+  format,
+  onFormat,
+  onChange,
+}: {
+  name: keyof Palette;
+  value: string;
+  format: ColorFormat;
+  onFormat: (format: ColorFormat) => void;
+  onChange: (value: string) => void;
+}) {
+  const withAlpha = ALPHA_COLORS.has(name);
+  const pickerValue = cssColorToPickerValue(value, withAlpha);
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="min-w-0 flex-1 truncate text-sm text-foreground">{COLOR_LABELS[name]}</span>
+      <ColorPicker
+        aria-label={COLOR_LABELS[name]}
+        value={pickerValue}
+        alpha={withAlpha}
+        onValueChange={(next) => onChange(pickerValueToCss(next))}
+      >
+        <ColorPickerTrigger className="h-8" />
+        <ColorPickerContent align="end" className="z-[70]">
+          <ColorPickerArea />
+          <div className="flex items-center gap-3">
+            <ColorPickerEyeDropper />
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              <ColorPickerHue />
+              {withAlpha ? <ColorPickerAlpha /> : null}
+            </div>
+          </div>
+          <div className="flex gap-1" role="group" aria-label="Color mode">
+            {COLOR_FORMATS.map((item) => (
+              <Button
+                key={item}
+                type="button"
+                size="sm"
+                variant={format === item ? "secondary" : "ghost"}
+                aria-pressed={format === item}
+                className="h-7 flex-1 px-2 font-mono text-[11px] uppercase"
+                onClick={() => onFormat(item)}
+              >
+                {item}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-start gap-1.5">
+            <ColorPickerHexInput className="min-w-0 flex-1" />
+            <ColorPickerSwatch />
+          </div>
+          {format === "rgb" || format === "hsl" ? <ColorPickerChannels format={format} /> : null}
+        </ColorPickerContent>
+      </ColorPicker>
     </div>
   );
 }
 
-function ColorRow({ name, value, onChange }: { name: keyof Palette; value: string; onChange: (value: string) => void }) {
-  const { hex, alpha } = readColor(value);
+const FONT_WEIGHTS = [
+  { value: "100", label: "Thin" },
+  { value: "200", label: "Extra light" },
+  { value: "300", label: "Light" },
+  { value: "400", label: "Regular" },
+  { value: "500", label: "Medium" },
+  { value: "600", label: "Semibold" },
+  { value: "700", label: "Bold" },
+];
+
+function TypeNumber({ label, value, onCommit }: { label: string; value: number; onCommit: (value: number) => void }) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => {
+    setText((current) => (Number(current) === value ? current : String(value)));
+  }, [value]);
+
   return (
-    <div className="grid gap-[6px]">
-      <div className="flex items-center gap-[8px]">
-        <input
-          type="color"
-          aria-label={COLOR_LABELS[name]}
-          value={hex}
-          onChange={(event) => onChange(writeColor(event.target.value, ALPHA_COLORS.has(name) ? alpha : 1))}
-          className="size-[22px] shrink-0 cursor-pointer appearance-none overflow-hidden rounded-[6px] border border-border bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0"
+    <Input
+      label={label}
+      value={text}
+      inputMode="decimal"
+      onChange={(next) => {
+        setText(next);
+        if (!/^-?\d*\.?\d+$/.test(next.trim())) return;
+        const parsed = Number(next);
+        if (Number.isFinite(parsed)) onCommit(parsed);
+      }}
+    />
+  );
+}
+
+function TypeSection() {
+  const design = useDesign();
+  const uploaded = useUploadedFonts();
+  const sansFile = useRef<HTMLInputElement>(null);
+  const monoFile = useRef<HTMLInputElement>(null);
+  const [note, setNote] = useState("");
+  const [group, setGroup] = useState<string | null>(null);
+  const show = (title: string) => (open: boolean) => setGroup(open ? title : null);
+  const sansFonts = [
+    ...SANS_FONTS,
+    ...uploaded.filter((font) => font.role === "sans").map((font) => ({ id: font.file, label: font.family, value: fontStack(font) })),
+  ];
+  const monoFonts = [
+    ...MONO_FONTS,
+    ...uploaded.filter((font) => font.role === "mono").map((font) => ({ id: font.file, label: font.family, value: fontStack(font) })),
+  ];
+  if (!sansFonts.some((font) => font.value === design.type.sans)) {
+    sansFonts.push({ id: "current-sans", label: "Current", value: design.type.sans });
+  }
+  if (!monoFonts.some((font) => font.value === design.type.mono)) {
+    monoFonts.push({ id: "current-mono", label: "Current", value: design.type.mono });
+  }
+
+  const setType = (patch: Partial<typeof design.type>) => patchDesign({ type: { ...design.type, ...patch } });
+  const addFont = async (file: File | undefined, role: "sans" | "mono") => {
+    if (!file) return;
+    const stack = await uploadFont(file, role);
+    if (!stack) {
+      setNote("Use a woff2, woff, ttf, or otf file under 2 MB.");
+      return;
+    }
+    setNote("");
+    setType(role === "sans" ? { sans: stack } : { mono: stack });
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <TokenGroup title="Family" open={group === "Family"} onOpenChange={show("Family")}>
+        <OptionPicker
+          label="Sans"
+          value={design.type.sans}
+          onValueChange={(sans) => setType({ sans })}
+          options={sansFonts.map((font) => ({
+            value: font.value,
+            label: font.label,
+            group: SERIF.has(font.id) ? "Serif" : "Sans",
+          }))}
         />
-        <span className="min-w-0 flex-1 truncate text-[12px] text-foreground">{COLOR_LABELS[name]}</span>
-        {ALPHA_COLORS.has(name) ? (
-          <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{Math.round(alpha * 100)}%</span>
+        <Field label="Weight">
+          <Select
+            value={String(design.type.weight)}
+            onValueChange={(value) => {
+              const weight = Number(value);
+              setType({ weight, displayWeight: weight });
+            }}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Weight" />
+            </SelectTrigger>
+            <SelectContent>
+              {FONT_WEIGHTS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <TypeNumber
+            label="Line height"
+            value={design.type.leading}
+            onCommit={(leading) => setType({ leading, leadingDisplay: leading, leadingTitle: leading })}
+          />
+          <TypeNumber
+            label="Tracking"
+            value={design.type.tracking}
+            onCommit={(tracking) => setType({ tracking, trackingTitle: tracking, trackingBody: tracking })}
+          />
+        </div>
+        <div>
+          <Button type="button" variant="ghost" size="sm" onClick={() => sansFile.current?.click()}>
+            Upload sans
+          </Button>
+          <input
+            ref={sansFile}
+            type="file"
+            accept=".woff2,.woff,.ttf,.otf"
+            className="hidden"
+            onChange={(event) => {
+              void addFont(event.target.files?.[0], "sans");
+              event.target.value = "";
+            }}
+          />
+        </div>
+      </TokenGroup>
+      <TokenGroup title="Mono" open={group === "Mono"} onOpenChange={show("Mono")}>
+        <OptionPicker
+          label="Mono"
+          value={design.type.mono}
+          onValueChange={(mono) => setType({ mono })}
+          options={monoFonts.map((font) => ({ value: font.value, label: font.label }))}
+        />
+        <div>
+          <Button type="button" variant="ghost" size="sm" onClick={() => monoFile.current?.click()}>
+            Upload mono
+          </Button>
+          <input
+            ref={monoFile}
+            type="file"
+            accept=".woff2,.woff,.ttf,.otf"
+            className="hidden"
+            onChange={(event) => {
+              void addFont(event.target.files?.[0], "mono");
+              event.target.value = "";
+            }}
+          />
+        </div>
+        {note ? (
+          <Alert variant="destructive">
+            <AlertDescription>{note}</AlertDescription>
+          </Alert>
         ) : null}
-      </div>
-      {ALPHA_COLORS.has(name) ? (
-        <input
-          type="range"
-          aria-label={`${COLOR_LABELS[name]} opacity`}
-          min={0}
-          max={1}
+      </TokenGroup>
+      <TokenGroup title="Scale" open={group === "Scale"} onOpenChange={show("Scale")}>
+        <Slider
+          id="type-ratio"
+          label="Scale"
+          value={design.type.ratio}
+          min={1.1}
+          max={1.5}
           step={0.01}
-          value={alpha}
-          onChange={(event) => onChange(writeColor(hex, Number(event.target.value)))}
-          className={RANGE}
+          display={design.type.ratio.toFixed(2)}
+          onChange={(ratio) => {
+            const scale = scaleRoles(design.type.body, ratio);
+            setType({ ratio, display: scale.display, title: scale.title, section: scale.section, eyebrow: scale.eyebrow, monoSize: scale.monoSize });
+          }}
+        />
+        <Slider id="type-display" label="Display" value={design.type.display} min={24} max={96} step={1} display={`${Math.round(design.type.display)} px`} onChange={(display) => setType({ display })} />
+        <Slider id="type-title" label="Title" value={design.type.title} min={16} max={64} step={1} display={`${Math.round(design.type.title)} px`} onChange={(title) => setType({ title })} />
+        <Slider id="type-section" label="Section" value={design.type.section} min={13} max={40} step={1} display={`${Math.round(design.type.section)} px`} onChange={(sectionSize) => setType({ section: sectionSize })} />
+        <Slider id="type-body" label="Body" value={design.type.body} min={11} max={24} step={1} display={`${Math.round(design.type.body)} px`} onChange={(body) => setType({ body })} />
+        <Slider id="type-eyebrow" label="Eyebrow" value={design.type.eyebrow} min={9} max={20} step={1} display={`${Math.round(design.type.eyebrow)} px`} onChange={(eyebrow) => setType({ eyebrow })} />
+        <Slider id="type-mono" label="Mono" value={design.type.monoSize} min={10} max={22} step={1} display={`${Math.round(design.type.monoSize)} px`} onChange={(monoSize) => setType({ monoSize })} />
+      </TokenGroup>
+    </div>
+  );
+}
+
+function IconSection() {
+  const design = useDesign();
+  const icons = design.icons;
+  const weight = icons.weight ?? "regular";
+  const setIcons = (patch: Partial<typeof icons>) => patchDesign({ icons: { ...icons, ...patch } });
+  const stroke = familyUsesStroke(icons.family, weight);
+  const families = ICON_FAMILIES.map((family) => ({
+    value: family.id,
+    label: family.label,
+    group: family.group,
+    icon: resolveIcon("sparkles", family.id, "regular"),
+  }));
+  const weights = weightsFor(icons.family).map((item) => ({
+    value: item.id,
+    label: item.label,
+    icon: resolveIcon("sparkles", icons.family, item.id),
+  }));
+
+  const chooseFamily = (value: string) => {
+    const family = value as IconFamily;
+    const nextWeight = clampWeight(family, weight);
+    const strokeWidth = familyUsesStroke(family, nextWeight) ? strokeForWeight(nextWeight) : null;
+    setIcons({ family, weight: nextWeight, ...(strokeWidth == null ? {} : { strokeWidth }) });
+  };
+
+  const chooseWeight = (value: string) => {
+    const nextWeight = value as IconWeight;
+    const strokeWidth = familyUsesStroke(icons.family, nextWeight) ? strokeForWeight(nextWeight) : null;
+    setIcons({ weight: nextWeight, ...(strokeWidth == null ? {} : { strokeWidth }) });
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <GroupTitle>Style</GroupTitle>
+      <OptionPicker label="Family" value={icons.family} options={families} strokeWidth={icons.strokeWidth} onValueChange={chooseFamily} />
+      <OptionPicker label="Weight" value={weight} options={weights} strokeWidth={icons.strokeWidth} onValueChange={chooseWeight} />
+      {stroke ? (
+        <Slider
+          id="icon-stroke"
+          label="Stroke"
+          value={icons.strokeWidth}
+          min={1.25}
+          max={2.5}
+          step={0.25}
+          display={icons.strokeWidth.toFixed(2)}
+          onChange={(strokeWidth) => setIcons({ strokeWidth })}
         />
       ) : null}
+      <div className="flex flex-wrap gap-3 rounded-[var(--radius-lg)] border border-border bg-card p-3">
+        {NAV_ICON_SLOTS.map(({ id }) => {
+          const Icon = resolveNavIcon(id, icons);
+          return (
+            <Icon
+              key={id}
+              className={isPixelFamily(icons.family) ? "size-6 text-foreground" : "size-4 text-foreground"}
+              strokeWidth={icons.strokeWidth}
+              aria-hidden
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function Heading({ children }: { children: string }) {
-  return <h2 className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">{children}</h2>;
-}
+type ThemeActions = {
+  naming: boolean;
+  setNaming: (value: boolean | ((prev: boolean) => boolean)) => void;
+  confirmDelete: boolean;
+  setConfirmDelete: (value: boolean) => void;
+  name: string;
+  setName: (value: string) => void;
+};
 
-const ACTION =
-  "inline-flex h-[28px] shrink-0 items-center rounded-[8px] px-[10px] text-[12px] leading-none disabled:pointer-events-none disabled:opacity-40";
-
-function ThemeBar() {
+function ThemeField({ naming, setNaming, setConfirmDelete, name, setName }: ThemeActions) {
   const { activeId, themes, dirty } = useThemes();
-  const active = themes.find((theme) => theme.id === activeId) ?? themes[0];
-  const [naming, setNaming] = useState(false);
-  const [name, setName] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const reduce = useReducedMotion();
 
   const choose = (id: string) => {
     setNaming(false);
@@ -141,438 +568,371 @@ function ThemeBar() {
   };
 
   return (
-    <div className="flex shrink-0 flex-col gap-[8px] border-b border-border px-[14px] py-[10px]">
-      <div className="flex items-baseline justify-between gap-[8px]">
-        <label htmlFor="design-theme" className="text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
-          Theme
-        </label>
-        {dirty ? <span className="text-[11px] text-muted-foreground">Edited</span> : null}
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium tracking-widest text-muted-foreground uppercase">Theme</span>
+        {dirty ? (
+          <AnimatedBadge status="warning" size="sm" showIcon={false}>
+            Edited
+          </AnimatedBadge>
+        ) : null}
       </div>
-      <select
-        id="design-theme"
-        value={active.id}
-        onChange={(event) => choose(event.target.value)}
-        className="h-[32px] w-full rounded-[8px] border border-border bg-background px-[8px] text-[12px] text-foreground"
-      >
-        {themes.map((theme) => (
-          <option key={theme.id} value={theme.id}>
-            {theme.builtin ? theme.name : `${theme.name} · saved`}
-          </option>
-        ))}
-      </select>
-      {confirmDelete ? (
-        <div className="flex items-center justify-between gap-[8px]">
-          <p className="text-[12px] text-foreground">Delete {active.name}?</p>
-          <div className="flex gap-[6px]">
-            <button
-              type="button"
-              onClick={() => {
-                deleteTheme(active.id);
-                setConfirmDelete(false);
-              }}
-              className={cn(ACTION, "bg-destructive text-white")}
-            >
-              Delete
-            </button>
-            <button type="button" onClick={() => setConfirmDelete(false)} className={cn(ACTION, "text-muted-foreground hover:bg-muted hover:text-foreground")}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-[6px]">
-          {active.builtin ? null : (
-            <button type="button" disabled={!dirty} onClick={updateActiveTheme} className={cn(ACTION, "bg-foreground text-background")}>
-              Save
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setConfirmDelete(false);
-              setNaming((value) => !value);
-            }}
-            className={cn(ACTION, naming ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground")}
+      <Select value={activeId} onValueChange={choose}>
+        <SelectTrigger>
+          <SelectValue placeholder="Theme" />
+        </SelectTrigger>
+        <SelectContent>
+          {themes.map((theme) => (
+            <SelectItem key={theme.id} value={theme.id}>
+              {theme.builtin ? theme.name : `${theme.name} · saved`}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <AnimatePresence initial={false}>
+        {naming ? (
+          <motion.form
+            key="theme-name"
+            onSubmit={addTheme}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+            className="flex items-end gap-2 overflow-hidden"
           >
-            Save as
-          </button>
-          <button
-            type="button"
-            disabled={!dirty}
-            onClick={resetActiveTheme}
-            className={cn(ACTION, "text-muted-foreground hover:bg-muted hover:text-foreground")}
-          >
-            Reset
-          </button>
-          {active.builtin ? null : (
-            <button
-              type="button"
-              onClick={() => {
-                setNaming(false);
-                setConfirmDelete(true);
-              }}
-              className={cn(ACTION, "text-muted-foreground hover:bg-muted hover:text-foreground")}
-            >
-              Delete
-            </button>
-          )}
-        </div>
-      )}
-      {naming ? (
-        <form onSubmit={addTheme} className="flex gap-[6px]">
-          <input
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Theme name"
-            maxLength={40}
-            aria-label="Theme name"
-            className="h-[32px] min-w-0 flex-1 rounded-[8px] border border-border bg-background px-[8px] text-[12px] text-foreground"
-          />
-          <button type="submit" disabled={!name.trim()} className={cn(ACTION, "bg-foreground text-background")}>
-            Add
-          </button>
-        </form>
-      ) : null}
+            <div className="min-w-0 flex-1">
+              <Input label="Theme name" value={name} onChange={setName} maxLength={40} autoFocus />
+            </div>
+            <Button type="submit" size="sm" disabled={!name.trim()}>
+              Create
+            </Button>
+          </motion.form>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
 
-export function DesignPlayground() {
-  const design = useDesign();
-  const { themes, activeId } = useThemes();
-  const saved = themes.find((theme) => theme.id === activeId)?.design;
-  const { resolvedTheme, setTheme } = useTheme();
-  const [open, setOpen] = useState(false);
-  const [section, setSection] = useState<Section>("color");
-  const mode = resolvedTheme === "dark" ? "dark" : "light";
-  const palette = design[mode];
-  const roles = typeRoles(design.type);
-  const radius = radiusSteps(design.radius);
+function PlaygroundFooter({ setNaming, confirmDelete, setConfirmDelete, setName }: ThemeActions) {
+  const { activeId, themes, dirty } = useThemes();
+  const { canUndo, canRedo } = useDesignHistory();
+  const reduce = useReducedMotion();
+  const active = themes.find((theme) => theme.id === activeId) ?? themes[0];
 
-  const setPalette = (patch: Partial<Palette>) => patchDesign({ [mode]: { ...palette, ...patch } });
-  const setHero = (patch: Partial<HeroConfig>) => patchDesign({ hero: { ...design.hero, ...patch } });
-
-  const resetSection = () => {
-    const base = saved ?? themes[0]?.design;
-    if (!base) return;
-    if (section === "color") patchDesign({ [mode]: { ...base[mode] } });
-    if (section === "type") patchDesign({ type: { ...base.type } });
-    if (section === "space") patchDesign({ space: { ...base.space } });
-    if (section === "radius") patchDesign({ radius: { ...base.radius } });
-    if (section === "hero") patchDesign({ hero: { ...DEFAULT_HERO } });
+  const openNaming = () => {
+    setConfirmDelete(false);
+    setNaming((value) => {
+      if (!value) setName("");
+      return !value;
+    });
   };
 
   return (
-    <div className="fixed right-[20px] bottom-[20px] z-40 flex w-[min(340px,calc(100vw-40px))] flex-col items-end gap-[8px]">
-      {open ? (
-        <aside className="flex max-h-[min(34rem,calc(100svh-5.5rem))] w-full flex-col overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-xl">
-          <div className="flex shrink-0 items-start justify-between gap-[12px] border-b border-border px-[14px] py-[12px]">
-            <div>
-              <p className="text-[13px] font-medium">Playground</p>
-              <p className="mt-[2px] text-[11px] text-muted-foreground">Colors, type, space, radius, and the hero.</p>
-            </div>
-            <div className="flex items-center gap-[6px]">
-              <div className="flex rounded-[8px] bg-muted p-[2px] text-[11px]">
-                {(["light", "dark"] as const).map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    aria-pressed={mode === item}
-                    onClick={() => setTheme(item)}
-                    className={cn(
-                      "rounded-[6px] px-[8px] py-[3px] capitalize",
-                      mode === item ? "bg-background text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="inline-flex size-[28px] items-center justify-center rounded-[8px] text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Close playground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          </div>
-          <ThemeBar />
-          <div className="flex shrink-0 items-center gap-[4px] border-b border-border px-[10px] py-[8px]">
+    <CardFooter className="justify-between border-t border-border py-3">
+      <div className="flex items-center gap-1">
+        <Tooltip content="Undo">
+          <Button type="button" variant="ghost" size="icon" disabled={!canUndo} aria-label="Undo" onClick={undoDesign}>
+            <Undo2 className="size-4" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Redo">
+          <Button type="button" variant="ghost" size="icon" disabled={!canRedo} aria-label="Redo" onClick={redoDesign}>
+            <Redo2 className="size-4" />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Reset theme">
+          <Button type="button" variant="ghost" size="icon" disabled={!dirty} aria-label="Reset theme" onClick={resetActiveTheme}>
+            <RotateCcw className="size-4" />
+          </Button>
+        </Tooltip>
+      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        {confirmDelete ? (
+          <motion.div
+            key="confirm"
+            initial={reduce ? { opacity: 0 } : { opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, x: 8 }}
+            transition={{ duration: 0.18, ease: EASE_OUT }}
+            className="flex items-center gap-2"
+          >
+            <span className="text-xs text-foreground">Delete {active.name}?</span>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                deleteTheme(active.id);
+                setConfirmDelete(false);
+              }}
+            >
+              Delete
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="actions"
+            initial={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, x: -8 }}
+            transition={{ duration: 0.18, ease: EASE_OUT }}
+            className="flex flex-wrap justify-end gap-1"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={active.builtin}
+              onClick={() => {
+                setNaming(false);
+                setConfirmDelete(true);
+              }}
+            >
+              Delete
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={openNaming}>
+              New theme
+            </Button>
+            <Button type="button" size="sm" disabled={!dirty} onClick={applyTheme} className="disabled:opacity-40">
+              Save
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </CardFooter>
+  );
+}
+
+export function useDesignKeyboardShortcuts() {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.isContentEditable) return;
+      if (target instanceof HTMLTextAreaElement) return;
+      if (target instanceof HTMLInputElement && target.type !== "range" && target.type !== "color") return;
+      const meta = event.metaKey || event.ctrlKey;
+      if (!meta) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && event.shiftKey) {
+        event.preventDefault();
+        redoDesign();
+      } else if (key === "z") {
+        event.preventDefault();
+        undoDesign();
+      } else if (key === "y") {
+        event.preventDefault();
+        redoDesign();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+}
+
+/** Theme tokens and component previews. Used on `/design-system` and the landing popover. */
+export function DesignSystemWorkspace({
+  title = "Design system",
+  onClose,
+  className,
+}: {
+  title?: string;
+  onClose?: () => void;
+  className?: string;
+}) {
+  const design = useDesign();
+  const { resolvedTheme } = useTheme();
+  const [section, setSection] = useState<Section>("color");
+  const [colorFormat, setColorFormat] = useState<ColorFormat>("hex");
+  const [colorGroup, setColorGroup] = useState<string | null>(null);
+  const [spaceOpen, setSpaceOpen] = useState(false);
+  const [radiusOpen, setRadiusOpen] = useState(false);
+  const [heroGroup, setHeroGroup] = useState<string | null>(null);
+  const [naming, setNaming] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [themeName, setThemeName] = useState("");
+  const themeActions = { naming, setNaming, confirmDelete, setConfirmDelete, name: themeName, setName: setThemeName };
+  const mode = resolvedTheme === "dark" ? "dark" : "light";
+  const palette = design[mode];
+  const radius = radiusSteps(design.radius);
+  const reduce = useReducedMotion();
+  const setPalette = (patch: Partial<Palette>) => patchDesign({ [mode]: { ...palette, ...patch } });
+  const setHero = (patch: Partial<HeroConfig>) => patchDesign({ hero: { ...design.hero, ...patch } });
+
+  return (
+    <Card
+      size="compact"
+      className={cn(
+        "flex w-full flex-col gap-0 py-0",
+        onClose ? "max-h-[min(52rem,calc(100svh-4.5rem))] border-0 bg-transparent shadow-none" : "min-h-[min(52rem,calc(100svh-8rem))]",
+        className,
+      )}
+    >
+      <CardHeader className="border-b border-border py-3">
+        <CardTitle>{title}</CardTitle>
+        <CardAction className="gap-1">
+          <ThemeToggle
+            variant="circle"
+            className="size-8 rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted hover:text-foreground"
+            iconClassName="size-4"
+          />
+          {onClose ? (
+            <Button type="button" variant="ghost" size="icon" aria-label="Close design system" onClick={onClose}>
+              <X className="size-4" />
+            </Button>
+          ) : null}
+        </CardAction>
+      </CardHeader>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <motion.div
+          layout={!reduce}
+          className="relative z-30 shrink-0 border-b border-border px-4 py-3"
+          transition={{ layout: SPRING_SWAP }}
+        >
+          <ThemeField {...themeActions} />
+        </motion.div>
+        <Tabs value={section} onValueChange={(value) => setSection(value as Section)} variant="underline" className="flex min-h-0 flex-1 flex-col">
+          <TabsList className="px-2">
             {SECTIONS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={section === item.id}
-                onClick={() => setSection(item.id)}
-                className={cn(
-                  "inline-flex h-[28px] shrink-0 items-center rounded-full px-[10px] text-[12px] leading-none",
-                  section === item.id ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted",
-                )}
-              >
+              <TabsTrigger key={item.id} value={item.id}>
                 {item.label}
-              </button>
+              </TabsTrigger>
             ))}
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto px-[14px] py-[14px]">
-            {section === "color" ? (
-              COLOR_GROUPS.map((group) => (
-                <section key={group.title} className="flex flex-col gap-[10px]">
-                  <Heading>{group.title}</Heading>
+          </TabsList>
+          <CardContent className="min-h-0 flex-1 overflow-y-auto py-4">
+            <TabsContent value="color" className="mt-0 flex flex-col gap-1">
+              {COLOR_GROUPS.map((group) => (
+                <TokenGroup
+                  key={group.title}
+                  title={group.title}
+                  open={colorGroup === group.title}
+                  onOpenChange={(open) => setColorGroup(open ? group.title : null)}
+                >
                   {group.keys.map((key) => (
-                    <ColorRow key={key} name={key} value={palette[key]} onChange={(value) => setPalette({ [key]: value })} />
+                    <ColorRow
+                      key={key}
+                      name={key}
+                      value={palette[key]}
+                      format={colorFormat}
+                      onFormat={setColorFormat}
+                      onChange={(value) => setPalette({ [key]: value })}
+                    />
                   ))}
-                </section>
-              ))
-            ) : null}
-            {section === "type" ? (
-              <section className="flex flex-col gap-[12px]">
-                <Heading>Family</Heading>
-                <label className="grid gap-[6px] text-[12px] text-muted-foreground">
-                  Sans
-                  <select
-                    value={design.type.sans}
-                    onChange={(event) => patchDesign({ type: { ...design.type, sans: event.target.value } })}
-                    className="h-[32px] rounded-[8px] border border-border bg-background px-[8px] text-[12px] text-foreground"
-                  >
-                    {SANS_FONTS.map((font) => (
-                      <option key={font.id} value={font.value}>
-                        {font.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-[6px] text-[12px] text-muted-foreground">
-                  Mono
-                  <select
-                    value={design.type.mono}
-                    onChange={(event) => patchDesign({ type: { ...design.type, mono: event.target.value } })}
-                    className="h-[32px] rounded-[8px] border border-border bg-background px-[8px] text-[12px] text-foreground"
-                  >
-                    {MONO_FONTS.map((font) => (
-                      <option key={font.id} value={font.value}>
-                        {font.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <Slider
-                  id="type-body"
-                  label="Body"
-                  value={design.type.body}
-                  min={12}
-                  max={20}
-                  step={1}
-                  display={`${Math.round(design.type.body)} px`}
-                  onChange={(body) => patchDesign({ type: { ...design.type, body } })}
-                />
-                <Slider
-                  id="type-ratio"
-                  label="Ratio"
-                  value={design.type.ratio}
-                  min={1.1}
-                  max={1.5}
-                  step={0.01}
-                  display={design.type.ratio.toFixed(2)}
-                  onChange={(ratio) => patchDesign({ type: { ...design.type, ratio } })}
-                />
-                <Slider
-                  id="type-tracking"
-                  label="Tracking"
-                  value={design.type.tracking}
-                  min={-0.08}
-                  max={0.04}
-                  step={0.005}
-                  display={`${design.type.tracking.toFixed(3)} em`}
-                  onChange={(tracking) => patchDesign({ type: { ...design.type, tracking } })}
-                />
-                <div className="grid gap-[4px] border-t border-border pt-[12px] text-foreground">
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "var(--text-display)", letterSpacing: "var(--tracking-display)", lineHeight: 1.02 }}>
-                    Display {Math.round(roles.display)}
-                  </p>
-                  <p style={{ fontSize: "var(--text-title)", letterSpacing: "var(--tracking-title)", fontWeight: 600 }}>
-                    Title {Math.round(roles.title)}
-                  </p>
-                  <p style={{ fontSize: "var(--text-section)", fontWeight: 600 }}>Section {Math.round(roles.section)}</p>
-                  <p style={{ fontSize: "var(--text-body)" }}>Body {Math.round(roles.body)}</p>
-                  <p className="uppercase" style={{ fontSize: "var(--text-eyebrow)", letterSpacing: "var(--tracking-eyebrow)" }}>
-                    Eyebrow {Math.round(roles.eyebrow)}
-                  </p>
-                  <p className="font-mono" style={{ fontSize: "var(--text-eyebrow)" }}>
-                    Mono {Math.round(roles.eyebrow)}
-                  </p>
-                </div>
-              </section>
-            ) : null}
-            {section === "space" ? (
-              <section className="flex flex-col gap-[12px]">
-                <Slider
-                  id="space-base"
-                  label="Base unit"
-                  value={design.space.base}
-                  min={2}
-                  max={8}
-                  step={1}
-                  display={`${design.space.base} px`}
-                  onChange={(base) => patchDesign({ space: { ...design.space, base } })}
-                />
-                <Slider
-                  id="space-page"
-                  label="Page"
-                  value={design.space.page}
-                  min={12}
-                  max={64}
-                  step={1}
-                  display={`${design.space.page} px`}
-                  onChange={(page) => patchDesign({ space: { ...design.space, page } })}
-                />
-                <Slider
-                  id="space-section"
-                  label="Sections"
-                  value={design.space.section}
-                  min={8}
-                  max={64}
-                  step={1}
-                  display={`${design.space.section} px`}
-                  onChange={(sectionGap) => patchDesign({ space: { ...design.space, section: sectionGap } })}
-                />
-                <Slider
-                  id="space-control"
-                  label="Controls"
-                  value={design.space.control}
-                  min={4}
-                  max={24}
-                  step={1}
-                  display={`${design.space.control} px`}
-                  onChange={(control) => patchDesign({ space: { ...design.space, control } })}
-                />
-              </section>
-            ) : null}
-            {section === "radius" ? (
-              <section className="flex flex-col gap-[12px]">
-                <Slider
-                  id="radius-base"
-                  label="Base"
-                  value={design.radius.base}
-                  min={2}
-                  max={20}
-                  step={1}
-                  display={`${Math.round(radius.lg)} px`}
-                  onChange={(base) => patchDesign({ radius: { ...design.radius, base } })}
-                />
-                <Slider
-                  id="radius-ratio"
-                  label="Ratio"
-                  value={design.radius.ratio}
-                  min={1.15}
-                  max={2}
-                  step={0.01}
-                  display={design.radius.ratio.toFixed(2)}
-                  onChange={(ratio) => patchDesign({ radius: { ...design.radius, ratio } })}
-                />
-                <div className="grid grid-cols-4 gap-[8px] border-t border-border pt-[12px]">
-                  {(
-                    [
-                      ["md", radius.md],
-                      ["lg", radius.lg],
-                      ["xl", radius.xl],
-                      ["2xl", radius.xl2],
-                    ] as const
-                  ).map(([label, size]) => (
-                    <div key={label} className="flex flex-col items-center gap-[6px]">
-                      <div className="size-[36px] border border-border bg-muted" style={{ borderRadius: size }} />
-                      <span className="text-[10px] text-muted-foreground">
-                        {label} {Math.round(size)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-            {section === "hero" ? (
-              <>
-                <section className="flex flex-col gap-[12px]">
-                  <div className="flex items-center justify-between">
-                    <Heading>Grid</Heading>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={design.hero.squares}
-                      onClick={() => setHero({ squares: !design.hero.squares })}
-                      className={cn("relative h-[20px] w-[36px] rounded-full", design.hero.squares ? "bg-foreground" : "bg-border-strong")}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-[2px] size-[16px] rounded-full bg-background",
-                          design.hero.squares ? "left-[18px]" : "left-[2px]",
-                        )}
-                      />
-                      <span className="sr-only">Show grid</span>
-                    </button>
+                </TokenGroup>
+              ))}
+            </TabsContent>
+            <TabsContent value="type" className="mt-0">
+              <TypeSection />
+            </TabsContent>
+            <TabsContent value="icons" className="mt-0">
+              <IconSection />
+            </TabsContent>
+            <TabsContent value="space" className="mt-0 flex flex-col gap-1">
+              <TokenGroup title="Spacing" open={spaceOpen} onOpenChange={setSpaceOpen}>
+                <Slider id="space-base" label="Base unit" value={design.space.base} min={2} max={8} step={1} display={`${design.space.base} px`} onChange={(base) => patchDesign({ space: { ...design.space, base } })} />
+                <Slider id="space-page" label="Page" value={design.space.page} min={12} max={64} step={1} display={`${design.space.page} px`} onChange={(page) => patchDesign({ space: { ...design.space, page } })} />
+                <Slider id="space-section" label="Sections" value={design.space.section} min={8} max={64} step={1} display={`${design.space.section} px`} onChange={(sectionGap) => patchDesign({ space: { ...design.space, section: sectionGap } })} />
+                <Slider id="space-control" label="Controls" value={design.space.control} min={4} max={24} step={1} display={`${design.space.control} px`} onChange={(control) => patchDesign({ space: { ...design.space, control } })} />
+              </TokenGroup>
+            </TabsContent>
+            <TabsContent value="radius" className="mt-0 flex flex-col gap-1">
+              <TokenGroup title="Corners" open={radiusOpen} onOpenChange={setRadiusOpen}>
+                <Slider id="radius-base" label="Base" value={design.radius.base} min={0} max={32} step={1} display={`${Math.round(radius.lg)} px`} onChange={(base) => patchDesign({ radius: { ...design.radius, base } })} />
+                <Slider id="radius-ratio" label="Ratio" value={design.radius.ratio} min={1.15} max={2} step={0.01} display={design.radius.ratio.toFixed(2)} onChange={(ratio) => patchDesign({ radius: { ...design.radius, ratio } })} />
+                <div className="flex flex-col gap-3 border-t border-border pt-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Button</span>
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">xl {Math.round(radius.xl)} px</span>
                   </div>
-                  {SQUARE_FIELDS.map((field) => (
-                    <Slider
-                      key={field.key}
-                      id={`squares-${field.key}`}
-                      label={field.label}
-                      value={design.hero[field.key]}
-                      min={field.min}
-                      max={field.max}
-                      step={field.step}
-                      display={field.unit(design.hero[field.key])}
-                      onChange={(value) => setHero({ [field.key]: value })}
-                    />
-                  ))}
-                </section>
-                <section className="flex flex-col gap-[12px] border-t border-border pt-[14px]">
-                  <Heading>Image</Heading>
-                  {IMAGE_FIELDS.map((field) => (
-                    <Slider
-                      key={field.key}
-                      id={`image-${field.key}`}
-                      label={field.label}
-                      value={design.hero[field.key]}
-                      min={field.min}
-                      max={field.max}
-                      step={field.step}
-                      display={field.unit(design.hero[field.key])}
-                      onChange={(value) => setHero({ [field.key]: value })}
-                    />
-                  ))}
-                </section>
-              </>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 items-center justify-between border-t border-border px-[14px] py-[10px]">
-            <button
-              type="button"
-              onClick={resetSection}
-              className="inline-flex items-center gap-[6px] text-[12px] text-muted-foreground hover:text-foreground"
-            >
-              <RotateCcw className="size-3.5" />
-              Reset section
-            </button>
-            <button
-              type="button"
-              onClick={resetEverything}
-              className="text-[12px] text-muted-foreground hover:text-foreground"
-            >
-              Reset all
-            </button>
-          </div>
-        </aside>
-      ) : null}
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex items-center gap-[8px] rounded-[10px] bg-foreground px-[14px] py-[8px] text-[14px] font-medium text-background"
+                  <Button type="button" size="sm" className="w-fit">
+                    New experiment
+                  </Button>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Card</span>
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">2xl {Math.round(radius.xl2)} px</span>
+                  </div>
+                  <div className="h-12 border border-border bg-card" style={{ borderRadius: radius.xl2 }} />
+                </div>
+              </TokenGroup>
+            </TabsContent>
+            <TabsContent value="hero" className="mt-0 flex flex-col gap-1">
+              <TokenGroup title="Grid" open={heroGroup === "Grid"} onOpenChange={(open) => setHeroGroup(open ? "Grid" : null)}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground">Show grid</span>
+                  <Switch checked={design.hero.squares} onCheckedChange={(squares) => setHero({ squares })} ariaLabel="Show grid" />
+                </div>
+                {SQUARE_FIELDS.map((field) => (
+                  <Slider
+                    key={field.key}
+                    id={`squares-${field.key}`}
+                    label={field.label}
+                    value={design.hero[field.key]}
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    display={field.unit(design.hero[field.key])}
+                    onChange={(value) => setHero({ [field.key]: value })}
+                  />
+                ))}
+              </TokenGroup>
+              <TokenGroup title="Image" open={heroGroup === "Image"} onOpenChange={(open) => setHeroGroup(open ? "Image" : null)}>
+                {IMAGE_FIELDS.map((field) => (
+                  <Slider
+                    key={field.key}
+                    id={`image-${field.key}`}
+                    label={field.label}
+                    value={design.hero[field.key]}
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    display={field.unit(design.hero[field.key])}
+                    onChange={(value) => setHero({ [field.key]: value })}
+                  />
+                ))}
+              </TokenGroup>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
+      </div>
+      <PlaygroundFooter {...themeActions} />
+    </Card>
+  );
+}
+
+/** Landing-only floating entry to the design system. */
+export function DesignPlayground() {
+  useDesignKeyboardShortcuts();
+  const design = useDesign();
+  const radius = radiusSteps(design.radius);
+  const panelRadius = Math.round(radius.xl2);
+  const reduce = useReducedMotion();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <MorphPopover open={open} onOpenChange={setOpen} className="fixed right-5 bottom-5 z-40">
+      <MorphPopoverTrigger>
+        <Button type="button" size="icon" aria-label="Design system">
+          <motion.span
+            className="inline-flex"
+            initial={false}
+            animate={{ rotate: open ? 90 : 0, scale: open ? 0.92 : 1 }}
+            transition={reduce ? { duration: 0.15, ease: EASE_OUT } : SPRING_SWAP}
+          >
+            <SlidersHorizontal className="size-4" />
+          </motion.span>
+        </Button>
+      </MorphPopoverTrigger>
+      <MorphPopoverContent
+        side="top"
+        align="end"
+        sideOffset={10}
+        radius={panelRadius}
+        className="flex w-[min(24rem,calc(100vw-2rem))] max-h-[min(52rem,calc(100svh-4.5rem))] flex-col overflow-hidden p-0"
       >
-        <SlidersHorizontal className="size-4" />
-        Playground
-      </button>
-    </div>
+        <DesignSystemWorkspace title="Design system" onClose={() => setOpen(false)} />
+      </MorphPopoverContent>
+    </MorphPopover>
   );
 }

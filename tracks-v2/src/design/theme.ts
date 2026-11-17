@@ -1,5 +1,10 @@
 import { useSyncExternalStore } from "react";
-import { DEFAULT_HERO, loadHeroConfig, type HeroConfig } from "@/pages/landing-hero";
+import { DEFAULT_HERO, type HeroConfig } from "@/pages/landing-hero";
+import { DEFAULT_ICON_SETTINGS, type IconSettings, mergeIconSettings } from "./icons";
+import { installUploadedFonts, loadSharedFonts } from "./fonts";
+import shippedTheme from "./shipped-theme.json";
+
+export type { IconSettings } from "./icons";
 
 /**
  * One design document for the landing page and the product.
@@ -16,6 +21,8 @@ export type Palette = {
   muted: string;
   mutedForeground: string;
   border: string;
+  /** Line used on lighter raised surfaces, where the canvas border disappears. */
+  borderRaised: string;
   borderStrong: string;
   ring: string;
   input: string;
@@ -37,12 +44,33 @@ export type Palette = {
 export type TypeSettings = {
   sans: string;
   mono: string;
-  /** Modular scale between body, section, and title. Display sits above title. */
+  /** Modular scale. Moving it rewrites the role sizes from the body size. */
   ratio: number;
-  /** Body size in px. The other roles are derived from this and the ratio. */
   body: number;
-  /** Display and title tracking, in em. */
+  display: number;
+  title: number;
+  section: number;
+  eyebrow: number;
+  /** Size of the mono specimen and code blocks, in px. */
+  monoSize: number;
+  /** Display tracking, in em. */
   tracking: number;
+  /** Title tracking, in em. */
+  trackingTitle: number;
+  /** Body tracking, in em. */
+  trackingBody: number;
+  /** Eyebrow tracking, in em. */
+  trackingEyebrow: number;
+  /** UI text weight. */
+  weight: number;
+  /** Display and title weight. */
+  displayWeight: number;
+  /** Body line height, unitless. */
+  leading: number;
+  /** Display line height, unitless. */
+  leadingDisplay: number;
+  /** Title line height, unitless. */
+  leadingTitle: number;
 };
 
 export type SpaceSettings = {
@@ -65,33 +93,47 @@ export type DesignState = {
   type: TypeSettings;
   space: SpaceSettings;
   radius: RadiusSettings;
+  icons: IconSettings;
   hero: HeroConfig;
 };
 
 const SANS = '"Geist Variable", ui-sans-serif, system-ui, sans-serif';
 const MONO = '"Geist Mono Variable", ui-monospace, SFMono-Regular, monospace';
 
-export const SANS_FONTS = [
-  { id: "geist", label: "Geist", value: SANS },
-  { id: "system", label: "System", value: "ui-sans-serif, system-ui, sans-serif" },
-  { id: "serif", label: "Serif", value: 'Georgia, "Times New Roman", serif' },
-] as const;
+export function scaleRoles(body: number, ratio: number) {
+  const section = Math.round(body * ratio * 10) / 10;
+  const title = Math.round(section * ratio * 10) / 10;
+  const display = Math.round(title * ratio * 1.8 * 10) / 10;
+  const eyebrow = Math.round(Math.max(10, body * 0.75) * 10) / 10;
+  return { display, title, section, eyebrow, monoSize: eyebrow };
+}
 
-export const MONO_FONTS = [
-  { id: "geist-mono", label: "Geist Mono", value: MONO },
-  { id: "system-mono", label: "System mono", value: "ui-monospace, SFMono-Regular, monospace" },
-] as const;
+function sizedType(type: Pick<TypeSettings, "sans" | "mono" | "ratio" | "body" | "tracking">): TypeSettings {
+  return {
+    ...type,
+    ...scaleRoles(type.body, type.ratio),
+    weight: 400,
+    displayWeight: 500,
+    leading: 1.5,
+    leadingDisplay: 1.02,
+    leadingTitle: 1.2,
+    trackingTitle: Math.round(type.tracking * 0.7 * 1000) / 1000,
+    trackingBody: 0,
+    trackingEyebrow: 0.16,
+  };
+}
 
 const LIGHT: Palette = {
   background: "oklch(99% 0 0)",
   foreground: "oklch(15% 0 0)",
   card: "oklch(97% 0 0)",
-  muted: "oklch(97% 0 0)",
-  mutedForeground: "oklch(50% 0 0)",
-  border: "oklch(15% 0 0 / 0.06)",
+  muted: "oklch(94% 0 0)",
+  mutedForeground: "oklch(42% 0 0)",
+  border: "oklch(15% 0 0 / 0.12)",
+  borderRaised: "oklch(15% 0 0 / 0.12)",
   borderStrong: "oklch(15% 0 0 / 0.12)",
   ring: "oklch(15% 0 0 / 0.12)",
-  input: "oklch(15% 0 0 / 0.06)",
+  input: "oklch(15% 0 0 / 0.12)",
   primary: "#e90060",
   primaryForeground: "#ffffff",
   destructive: "oklch(62% 0.22 25)",
@@ -114,6 +156,7 @@ const DARK: Palette = {
   muted: "#1c1c1c",
   mutedForeground: "oklch(62% 0 0)",
   border: "rgb(255 255 255 / 0.05)",
+  borderRaised: "rgb(255 255 255 / 0.16)",
   borderStrong: "rgb(255 255 255 / 0.1)",
   ring: "rgb(255 255 255 / 0.1)",
   input: "rgb(255 255 255 / 0.05)",
@@ -135,9 +178,10 @@ const DARK: Palette = {
 export const DEFAULT_DESIGN: DesignState = {
   light: LIGHT,
   dark: DARK,
-  type: { sans: SANS, mono: MONO, ratio: 1.25, body: 15, tracking: -0.04 },
+  type: sizedType({ sans: SANS, mono: MONO, ratio: 1.25, body: 15, tracking: -0.04 }),
   space: { base: 4, page: 32, section: 32, control: 8 },
   radius: { base: 8, ratio: 1.5 },
+  icons: { ...DEFAULT_ICON_SETTINGS, nav: { ...DEFAULT_ICON_SETTINGS.nav } },
   hero: DEFAULT_HERO,
 };
 
@@ -155,10 +199,24 @@ const SERIF = 'Georgia, "Times New Roman", serif';
 
 const QUIET_LIGHT: Palette = {
   ...LIGHT,
+  background: "#f3f2f0",
+  foreground: "#262626",
+  card: "#faf9f8",
+  muted: "#e6e3de",
+  mutedForeground: "#5c574f",
+  border: "#d4d0c8",
+  borderRaised: "rgb(38 38 38 / 0.14)",
+  borderStrong: "rgb(38 38 38 / 0.18)",
+  ring: "rgb(38 38 38 / 0.16)",
+  input: "rgb(38 38 38 / 0.14)",
   primary: "#171717",
-  primaryForeground: "#ffffff",
+  primaryForeground: "#faf9f8",
   accent: "oklch(45% 0.02 260)",
-  accentForeground: "#ffffff",
+  accentForeground: "#faf9f8",
+  glassBg: "rgb(250 249 248 / 0.72)",
+  glassBorder: "rgb(38 38 38 / 0.08)",
+  glassStrongBg: "rgb(250 249 248 / 0.9)",
+  glassThinBg: "rgb(243 242 240 / 0.6)",
 };
 
 const QUIET_DARK: Palette = {
@@ -177,6 +235,7 @@ const INK_LIGHT: Palette = {
   muted: "#f3f3f3",
   mutedForeground: "#5e5e5e",
   border: "rgb(0 0 0 / 0.08)",
+  borderRaised: "rgb(0 0 0 / 0.14)",
   borderStrong: "rgb(0 0 0 / 0.16)",
   ring: "rgb(0 0 0 / 0.16)",
   input: "rgb(0 0 0 / 0.08)",
@@ -198,6 +257,7 @@ const INK_DARK: Palette = {
   muted: "#161616",
   mutedForeground: "#a1a1a1",
   border: "rgb(255 255 255 / 0.08)",
+  borderRaised: "rgb(255 255 255 / 0.18)",
   borderStrong: "rgb(255 255 255 / 0.16)",
   ring: "rgb(255 255 255 / 0.16)",
   input: "rgb(255 255 255 / 0.08)",
@@ -218,6 +278,7 @@ function themeDesign(design: ThemeDesign): ThemeDesign {
     type: { ...design.type },
     space: { ...design.space },
     radius: { ...design.radius },
+    icons: { ...design.icons, nav: { ...design.icons.nav } },
   };
 }
 
@@ -232,6 +293,7 @@ const BUILT_IN_THEMES: SavedTheme[] = [
       type: DEFAULT_DESIGN.type,
       space: DEFAULT_DESIGN.space,
       radius: DEFAULT_DESIGN.radius,
+      icons: DEFAULT_DESIGN.icons,
     }),
   },
   {
@@ -241,9 +303,10 @@ const BUILT_IN_THEMES: SavedTheme[] = [
     design: themeDesign({
       light: QUIET_LIGHT,
       dark: QUIET_DARK,
-      type: { sans: SANS, mono: MONO, ratio: 1.2, body: 15, tracking: -0.02 },
+      type: sizedType({ sans: SANS, mono: MONO, ratio: 1.2, body: 15, tracking: -0.02 }),
       space: { base: 4, page: 28, section: 24, control: 8 },
       radius: { base: 12, ratio: 1.4 },
+      icons: DEFAULT_DESIGN.icons,
     }),
   },
   {
@@ -253,16 +316,17 @@ const BUILT_IN_THEMES: SavedTheme[] = [
     design: themeDesign({
       light: INK_LIGHT,
       dark: INK_DARK,
-      type: { sans: SERIF, mono: MONO, ratio: 1.15, body: 17, tracking: -0.02 },
+      type: sizedType({ sans: SERIF, mono: MONO, ratio: 1.15, body: 17, tracking: -0.02 }),
       space: { base: 4, page: 40, section: 40, control: 10 },
       radius: { base: 4, ratio: 1.25 },
+      icons: DEFAULT_DESIGN.icons,
     }),
   },
 ];
 
 export const COLOR_GROUPS: { title: string; keys: (keyof Palette)[] }[] = [
   { title: "Surface", keys: ["background", "foreground", "card", "muted", "mutedForeground"] },
-  { title: "Line", keys: ["border", "borderStrong", "ring", "input"] },
+  { title: "Line", keys: ["border", "borderRaised", "borderStrong", "ring", "input"] },
   { title: "Brand", keys: ["primary", "primaryForeground"] },
   { title: "Status", keys: ["destructive", "success", "warning"] },
   { title: "Accent", keys: ["accent", "accentForeground", "neon", "violet"] },
@@ -276,6 +340,7 @@ export const COLOR_LABELS: Record<keyof Palette, string> = {
   muted: "Muted",
   mutedForeground: "Muted text",
   border: "Border",
+  borderRaised: "Raised border",
   borderStrong: "Strong border",
   ring: "Ring",
   input: "Input",
@@ -296,6 +361,7 @@ export const COLOR_LABELS: Record<keyof Palette, string> = {
 
 export const ALPHA_COLORS = new Set<keyof Palette>([
   "border",
+  "borderRaised",
   "borderStrong",
   "ring",
   "input",
@@ -312,6 +378,7 @@ const CSS_VAR: Record<keyof Palette, string> = {
   muted: "--muted",
   mutedForeground: "--muted-foreground",
   border: "--border",
+  borderRaised: "--border-raised",
   borderStrong: "--border-strong",
   ring: "--ring",
   input: "--input",
@@ -331,12 +398,14 @@ const CSS_VAR: Record<keyof Palette, string> = {
 };
 
 export function typeRoles(type: TypeSettings) {
-  const body = type.body;
-  const section = body * type.ratio;
-  const title = section * type.ratio;
-  const display = title * type.ratio * 1.8;
-  const eyebrow = Math.max(10, body * 0.75);
-  return { body, section, title, display, eyebrow };
+  return {
+    display: type.display,
+    title: type.title,
+    section: type.section,
+    body: type.body,
+    eyebrow: type.eyebrow,
+    mono: type.monoSize,
+  };
 }
 
 export function radiusSteps(radius: RadiusSettings) {
@@ -359,6 +428,8 @@ const BUILT_IN_IDS = new Set(BUILT_IN_THEMES.map((theme) => theme.id));
 type ThemeLibrary = {
   activeId: string;
   custom: SavedTheme[];
+  /** Saved edits of Tracks, Quiet, and Ink. The code copies stay the first-run defaults. */
+  overrides: Record<string, ThemeDesign>;
 };
 
 export type ThemeLibraryView = {
@@ -374,6 +445,7 @@ function sliceDesign(design: DesignState): ThemeDesign {
     type: design.type,
     space: design.space,
     radius: design.radius,
+    icons: design.icons,
   };
 }
 
@@ -390,31 +462,94 @@ function sanitizeSaved(value: unknown): SavedTheme | null {
   return { id: raw.id, name, builtin: false, design: sliceDesign(sanitizeDesign(raw.design)) };
 }
 
+function sanitizeOverrides(value: unknown): Record<string, ThemeDesign> {
+  if (!value || typeof value !== "object") return {};
+  const overrides: Record<string, ThemeDesign> = {};
+  for (const [id, design] of Object.entries(value as Record<string, unknown>)) {
+    if (!BUILT_IN_IDS.has(id)) continue;
+    overrides[id] = sliceDesign(sanitizeDesign(design));
+  }
+  return overrides;
+}
+
+type StoredLibrary = {
+  design?: unknown;
+  activeId?: unknown;
+  custom?: unknown;
+  overrides?: unknown;
+  removed?: unknown;
+  revision?: unknown;
+};
+
+const shipped = shippedTheme as StoredLibrary;
+
+function shippedRevision() {
+  return typeof shipped.revision === "number" ? shipped.revision : 0;
+}
+
+function rememberRemoved(value: unknown) {
+  if (!Array.isArray(value)) return;
+  value.forEach((id) => {
+    if (typeof id === "string") removedIds.add(id);
+  });
+}
+
+function takeLibrary(raw: StoredLibrary): ThemeLibrary {
+  const custom = Array.isArray(raw.custom) ? raw.custom.flatMap((item) => sanitizeSaved(item) ?? []) : [];
+  const ids = new Set([...BUILT_IN_IDS, ...custom.map((theme) => theme.id)]);
+  const activeId = typeof raw.activeId === "string" && ids.has(raw.activeId) ? raw.activeId : "tracks";
+  rememberRemoved(raw.removed);
+  if (typeof raw.revision === "number") revision = Math.max(revision, raw.revision);
+  return { activeId, custom, overrides: sanitizeOverrides(raw.overrides) };
+}
+
 function readLibrary(): ThemeLibrary {
   try {
-    const raw = JSON.parse(localStorage.getItem(THEMES_KEY) || "") as { activeId?: unknown; custom?: unknown };
-    const custom = Array.isArray(raw.custom) ? raw.custom.flatMap((item) => sanitizeSaved(item) ?? []) : [];
-    const ids = new Set([...BUILT_IN_IDS, ...custom.map((theme) => theme.id)]);
-    const activeId = typeof raw.activeId === "string" && ids.has(raw.activeId) ? raw.activeId : "tracks";
-    return { activeId, custom };
+    return takeLibrary(JSON.parse(localStorage.getItem(THEMES_KEY) || "") as StoredLibrary);
   } catch {
-    return { activeId: "tracks", custom: [] };
+    return { activeId: "tracks", custom: [], overrides: {} };
   }
 }
 
-let library: ThemeLibrary = { activeId: "tracks", custom: [] };
+let library: ThemeLibrary = { activeId: "tracks", custom: [], overrides: {} };
+const removedIds = new Set<string>();
 let libraryView: ThemeLibraryView | null = null;
 
 function allThemes() {
-  return [...BUILT_IN_THEMES, ...library.custom];
+  return [...BUILT_IN_THEMES, ...library.custom].map((theme) => {
+    const override = library.overrides[theme.id];
+    return override ? { ...theme, design: override } : theme;
+  });
 }
 
 function activeTheme() {
   return allThemes().find((theme) => theme.id === library.activeId) ?? BUILT_IN_THEMES[0];
 }
 
-function persistLibrary() {
-  localStorage.setItem(THEMES_KEY, JSON.stringify({ activeId: library.activeId, custom: library.custom }));
+function writeLibrary() {
+  localStorage.setItem(
+    THEMES_KEY,
+    JSON.stringify({
+      activeId: library.activeId,
+      custom: library.custom,
+      overrides: library.overrides,
+      revision,
+    }),
+  );
+}
+
+let shipOnNextPush = false;
+
+function persistLibrary(ship = false) {
+  if (ship) shipOnNextPush = true;
+  if (!applyingRemote) {
+    revision = Date.now();
+    editedAt = revision;
+  }
+  writeLibrary();
+  if (applyingRemote) return;
+  channel?.postMessage(sharedPayload());
+  schedulePush();
 }
 
 function readLibraryView(): ThemeLibraryView {
@@ -436,6 +571,7 @@ export function useThemes() {
 export function selectTheme(id: string) {
   const theme = allThemes().find((item) => item.id === id);
   if (!theme || theme.id === library.activeId) return;
+  recordStep();
   library = { ...library, activeId: theme.id };
   libraryView = null;
   persistLibrary();
@@ -451,38 +587,49 @@ export function saveTheme(name: string) {
     builtin: false,
     design: themeDesign(sliceDesign(state)),
   };
-  library = { activeId: saved.id, custom: [...library.custom, saved] };
+  library = { ...library, activeId: saved.id, custom: [...library.custom, saved] };
   libraryView = null;
-  persistLibrary();
+  persistLibrary(true);
   emit();
   return saved.id;
 }
 
-export function updateActiveTheme() {
+/** Write the current look onto the selected theme, built in or saved, and apply it in every window. */
+export function applyTheme() {
+  flushStep();
+  const snapshot = themeDesign(sliceDesign(state));
   const current = library.custom.find((theme) => theme.id === library.activeId);
-  if (!current) return;
-  library = {
-    ...library,
-    custom: library.custom.map((theme) =>
-      theme.id === current.id ? { ...theme, design: themeDesign(sliceDesign(state)) } : theme,
-    ),
-  };
+  if (current) {
+    library = {
+      ...library,
+      custom: library.custom.map((theme) => (theme.id === current.id ? { ...theme, design: snapshot } : theme)),
+    };
+  } else if (BUILT_IN_IDS.has(library.activeId)) {
+    library = { ...library, overrides: { ...library.overrides, [library.activeId]: snapshot } };
+  }
   libraryView = null;
-  persistLibrary();
+  persistLibrary(true);
   emit();
+}
+
+export function updateActiveTheme() {
+  applyTheme();
 }
 
 export function deleteTheme(id: string) {
   if (!library.custom.some((theme) => theme.id === id)) return;
+  removedIds.add(id);
   const wasActive = library.activeId === id;
   library = {
+    ...library,
     activeId: wasActive ? "tracks" : library.activeId,
     custom: library.custom.filter((theme) => theme.id !== id),
   };
   libraryView = null;
-  persistLibrary();
+  persistLibrary(true);
   if (wasActive) {
-    setDesign({ ...themeDesign(BUILT_IN_THEMES[0].design), hero: { ...state.hero } });
+    const tracks = allThemes().find((theme) => theme.id === "tracks") ?? BUILT_IN_THEMES[0];
+    setDesign({ ...themeDesign(tracks.design), hero: { ...state.hero } });
     return;
   }
   emit();
@@ -490,12 +637,14 @@ export function deleteTheme(id: string) {
 
 /** Put the selected theme back. Hero settings stay. */
 export function resetActiveTheme() {
+  recordStep();
   const theme = activeTheme();
   setDesign({ ...themeDesign(theme.design), hero: { ...state.hero } });
 }
 
 /** Put the selected theme back, and the hero back to its defaults. */
 export function resetEverything() {
+  recordStep();
   const theme = activeTheme();
   setDesign({ ...themeDesign(theme.design), hero: { ...DEFAULT_HERO } });
 }
@@ -520,6 +669,37 @@ function mergeNumber<T extends Record<string, number | string>>(base: T, value: 
   return next;
 }
 
+function mergeType(value: unknown): TypeSettings {
+  const fallback = DEFAULT_DESIGN.type;
+  if (!value || typeof value !== "object") return { ...fallback };
+  const raw = value as Partial<TypeSettings>;
+  const body = typeof raw.body === "number" ? raw.body : fallback.body;
+  const ratio = typeof raw.ratio === "number" ? raw.ratio : fallback.ratio;
+  const scaled = scaleRoles(body, ratio);
+  const size = (key: "display" | "title" | "section" | "eyebrow" | "monoSize") =>
+    typeof raw[key] === "number" ? raw[key] : scaled[key];
+  return {
+    sans: typeof raw.sans === "string" && raw.sans.trim() ? raw.sans : fallback.sans,
+    mono: typeof raw.mono === "string" && raw.mono.trim() ? raw.mono : fallback.mono,
+    ratio,
+    body,
+    tracking: typeof raw.tracking === "number" ? raw.tracking : fallback.tracking,
+    trackingTitle: typeof raw.trackingTitle === "number" ? raw.trackingTitle : Math.round((typeof raw.tracking === "number" ? raw.tracking : fallback.tracking) * 0.7 * 1000) / 1000,
+    trackingBody: typeof raw.trackingBody === "number" ? raw.trackingBody : fallback.trackingBody,
+    trackingEyebrow: typeof raw.trackingEyebrow === "number" ? raw.trackingEyebrow : fallback.trackingEyebrow,
+    weight: typeof raw.weight === "number" ? raw.weight : fallback.weight,
+    displayWeight: typeof raw.displayWeight === "number" ? raw.displayWeight : fallback.displayWeight,
+    leading: typeof raw.leading === "number" ? raw.leading : fallback.leading,
+    leadingDisplay: typeof raw.leadingDisplay === "number" ? raw.leadingDisplay : fallback.leadingDisplay,
+    leadingTitle: typeof raw.leadingTitle === "number" ? raw.leadingTitle : fallback.leadingTitle,
+    display: size("display"),
+    title: size("title"),
+    section: size("section"),
+    eyebrow: size("eyebrow"),
+    monoSize: size("monoSize"),
+  };
+}
+
 function mergeHero(value: unknown): HeroConfig {
   const next = { ...DEFAULT_HERO };
   if (!value || typeof value !== "object") return next;
@@ -535,9 +715,10 @@ export function sanitizeDesign(value: unknown): DesignState {
   return {
     light: mergePalette(LIGHT, raw.light),
     dark: mergePalette(DARK, raw.dark),
-    type: mergeNumber(DEFAULT_DESIGN.type, raw.type),
+    type: mergeType(raw.type),
     space: mergeNumber(DEFAULT_DESIGN.space, raw.space),
     radius: mergeNumber(DEFAULT_DESIGN.radius, raw.radius),
+    icons: mergeIconSettings(raw.icons),
     hero: mergeHero(raw.hero),
   };
 }
@@ -556,9 +737,231 @@ let state: DesignState = DEFAULT_DESIGN;
 let mode: Mode = "light";
 const listeners = new Set<() => void>();
 
+const past: DesignState[] = [];
+const future: DesignState[] = [];
+let checkpoint: DesignState | null = null;
+let checkpointTimer = 0;
+let historyView = { canUndo: false, canRedo: false };
+let applyingRemote = false;
+let editedAt = 0;
+let revision = 0;
+let announcedLocal = false;
+let pushTimer = 0;
+let lastPushed = "";
+let hadStored = false;
+let channel: BroadcastChannel | null = null;
+
+function cloneDesign(design: DesignState): DesignState {
+  return JSON.parse(JSON.stringify(design)) as DesignState;
+}
+
+function refreshHistory() {
+  const canUndo = past.length > 0 || checkpoint !== null;
+  const canRedo = future.length > 0;
+  if (historyView.canUndo === canUndo && historyView.canRedo === canRedo) return;
+  historyView = { canUndo, canRedo };
+}
+
 function emit() {
   libraryView = null;
+  refreshHistory();
   listeners.forEach((listener) => listener());
+}
+
+function flushStep() {
+  window.clearTimeout(checkpointTimer);
+  if (checkpoint && JSON.stringify(checkpoint) !== JSON.stringify(state)) {
+    past.push(checkpoint);
+    if (past.length > 80) past.shift();
+    future.length = 0;
+  }
+  checkpoint = null;
+}
+
+function recordStep() {
+  flushStep();
+  past.push(cloneDesign(state));
+  if (past.length > 80) past.shift();
+  future.length = 0;
+}
+
+function sharedPayload(ship = false) {
+  return {
+    design: state,
+    activeId: library.activeId,
+    custom: library.custom,
+    overrides: library.overrides,
+    removed: [...removedIds],
+    revision,
+    ...(ship ? { ship: true } : {}),
+  };
+}
+
+function schedulePush() {
+  if (applyingRemote) return;
+  window.clearTimeout(pushTimer);
+  pushTimer = window.setTimeout(() => {
+    void pushShared();
+  }, 200);
+}
+
+async function pushShared() {
+  const ship = shipOnNextPush;
+  const body = JSON.stringify(sharedPayload(ship));
+  if (body === lastPushed) return true;
+  lastPushed = body;
+  try {
+    const res = await fetch("/api/design", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    if (!res.ok || !(res.headers.get("content-type") ?? "").includes("json")) {
+      lastPushed = "";
+      return false;
+    }
+    if (ship) shipOnNextPush = false;
+    return true;
+  } catch {
+    lastPushed = "";
+    return false;
+  }
+}
+
+function adoptShared(raw: unknown) {
+  if (!raw || typeof raw !== "object") return;
+  const data = raw as {
+    design?: unknown;
+    activeId?: unknown;
+    custom?: unknown;
+    overrides?: unknown;
+    removed?: unknown;
+    revision?: unknown;
+  };
+  if (!data.design) return;
+  if (Date.now() - editedAt < 800) return;
+  if (Array.isArray(data.removed)) {
+    data.removed.forEach((id) => {
+      if (typeof id === "string") removedIds.add(id);
+    });
+  }
+  const incomingRev = typeof data.revision === "number" ? data.revision : 0;
+  const incoming = Array.isArray(data.custom) ? data.custom.flatMap((item) => sanitizeSaved(item) ?? []) : [];
+  const kept = library.custom.filter(
+    (theme) => !removedIds.has(theme.id) && !incoming.some((item) => item.id === theme.id),
+  );
+  const custom = [...incoming.filter((theme) => !removedIds.has(theme.id)), ...kept];
+  const incomingOverrides = data.overrides === undefined ? null : sanitizeOverrides(data.overrides);
+  const overrides =
+    incomingOverrides === null
+      ? library.overrides
+      : incomingRev < revision
+        ? { ...incomingOverrides, ...library.overrides }
+        : incomingOverrides;
+  const localTheme = kept.find((theme) => theme.id === library.activeId);
+
+  // This window still has a saved theme the shared file has never seen. Publish it once.
+  if (localTheme && !announcedLocal) {
+    announcedLocal = true;
+    revision = Date.now();
+    editedAt = revision;
+    library = { ...library, custom, overrides };
+    libraryView = null;
+    writeLibrary();
+    schedulePush();
+    emit();
+    return;
+  }
+
+  if (incomingRev < revision) {
+    const customChanged = JSON.stringify(library.custom) !== JSON.stringify(custom);
+    const overridesChanged = JSON.stringify(library.overrides) !== JSON.stringify(overrides);
+    if (customChanged || overridesChanged) {
+      library = { ...library, custom, overrides };
+      libraryView = null;
+      writeLibrary();
+      if (kept.length || overridesChanged) schedulePush();
+      emit();
+    }
+    return;
+  }
+
+  const nextState = sanitizeDesign(data.design);
+  const ids = new Set([...BUILT_IN_IDS, ...custom.map((theme) => theme.id)]);
+  const activeId = typeof data.activeId === "string" && ids.has(data.activeId) ? data.activeId : "tracks";
+  const designChanged = JSON.stringify(state) !== JSON.stringify(nextState);
+  const libraryChanged =
+    library.activeId !== activeId ||
+    JSON.stringify(library.custom) !== JSON.stringify(custom) ||
+    JSON.stringify(library.overrides) !== JSON.stringify(overrides);
+  revision = Math.max(revision, incomingRev);
+  if (!designChanged && !libraryChanged) return;
+  applyingRemote = true;
+  state = nextState;
+  library = { activeId, custom, overrides };
+  if (designChanged) {
+    past.length = 0;
+    future.length = 0;
+    checkpoint = null;
+  }
+  localStorage.setItem(KEY, JSON.stringify(state));
+  writeLibrary();
+  lastPushed = JSON.stringify(sharedPayload());
+  applyDesign(document, state, mode);
+  applyingRemote = false;
+  emit();
+  if (kept.length) schedulePush();
+}
+
+async function pullShared() {
+  if (Date.now() - editedAt < 800) return;
+  const seen = revision;
+  try {
+    const res = await fetch("/api/design", { cache: "no-store" });
+    const type = res.headers.get("content-type") ?? "";
+    if (!res.ok || !type.includes("json") || seen !== revision || Date.now() - editedAt < 800) return;
+    const text = await res.text();
+    if (!text || text === "{}") {
+      if (hadStored) void pushShared();
+      return;
+    }
+    if (text === lastPushed || seen !== revision) return;
+    adoptShared(JSON.parse(text));
+  } catch {
+    // The dev server is the shared copy. Local storage still covers this window.
+  }
+}
+
+/** Load the shared copy, then keep every open window on it. */
+export function syncDesign() {
+  channel = new BroadcastChannel("tracks-design");
+  channel.onmessage = (event) => adoptShared(event.data);
+  window.addEventListener("storage", (event) => {
+    if (event.key !== KEY && event.key !== THEMES_KEY) return;
+    try {
+      adoptShared({
+        design: JSON.parse(localStorage.getItem(KEY) || "null"),
+        ...JSON.parse(localStorage.getItem(THEMES_KEY) || "{}"),
+      });
+    } catch {
+      // Ignore a partial write from another window.
+    }
+  });
+  window.addEventListener("focus", () => {
+    void pullShared();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) void pullShared();
+  });
+  window.setInterval(() => {
+    if (document.hidden) return;
+    void pullShared();
+    void loadSharedFonts();
+  }, 2000);
+  void loadSharedFonts();
+  void pullShared().then(() => {
+    if (!lastPushed) void pushShared();
+  });
 }
 
 export function getDesign() {
@@ -574,10 +977,26 @@ export function subscribeDesign(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+function adoptShippedTheme() {
+  state = sanitizeDesign(shipped.design);
+  revision = 0;
+  library = takeLibrary(shipped);
+  revision = shippedRevision();
+  localStorage.setItem(KEY, JSON.stringify(state));
+  writeLibrary();
+}
+
 export function hydrateDesign() {
+  hadStored = Boolean(localStorage.getItem(KEY) || localStorage.getItem(THEMES_KEY));
   const stored = readStored();
-  state = stored ?? { ...DEFAULT_DESIGN, hero: loadHeroConfig() };
   library = readLibrary();
+  // The shipped file is the theme that was saved. A newer edit in this browser wins.
+  if (!stored || shippedRevision() > revision) {
+    adoptShippedTheme();
+    hadStored = true;
+  } else {
+    state = stored;
+  }
   libraryView = null;
   const saved = localStorage.getItem("tracks-v2:theme");
   mode = saved === "dark" ? "dark" : "light";
@@ -586,6 +1005,12 @@ export function hydrateDesign() {
 export function setDesign(next: DesignState) {
   state = next;
   localStorage.setItem(KEY, JSON.stringify(state));
+  if (!applyingRemote) {
+    revision = Date.now();
+    editedAt = revision;
+    channel?.postMessage(sharedPayload());
+    schedulePush();
+  }
   applyDesign(document, state, mode);
   emit();
 }
@@ -597,7 +1022,39 @@ export function setDesignMode(next: Mode) {
 }
 
 export function patchDesign(patch: Partial<DesignState>) {
+  if (!checkpoint) checkpoint = cloneDesign(state);
+  window.clearTimeout(checkpointTimer);
+  checkpointTimer = window.setTimeout(() => {
+    flushStep();
+    emit();
+  }, 350);
   setDesign({ ...state, ...patch });
+}
+
+export function undoDesign() {
+  flushStep();
+  const prev = past.pop();
+  if (!prev) {
+    emit();
+    return;
+  }
+  future.push(cloneDesign(state));
+  setDesign(prev);
+}
+
+export function redoDesign() {
+  flushStep();
+  const next = future.pop();
+  if (!next) {
+    emit();
+    return;
+  }
+  past.push(cloneDesign(state));
+  setDesign(next);
+}
+
+export function useDesignHistory() {
+  return useSyncExternalStore(subscribeDesign, () => historyView, () => historyView);
 }
 
 export function useDesign() {
@@ -626,10 +1083,18 @@ export function applyDesign(doc: Document, design: DesignState, active: Mode) {
   el.style.setProperty("--text-section", `${roles.section}px`);
   el.style.setProperty("--text-body", `${roles.body}px`);
   el.style.setProperty("--text-eyebrow", `${roles.eyebrow}px`);
-  el.style.setProperty("--leading-display", "1.02");
+  el.style.setProperty("--text-mono", `${roles.mono}px`);
+  el.style.setProperty("--icon-stroke-width", String(design.icons.strokeWidth));
+  installUploadedFonts(el.ownerDocument);
+  el.style.setProperty("--font-weight", String(design.type.weight));
+  el.style.setProperty("--font-weight-display", String(design.type.displayWeight));
+  el.style.setProperty("--leading-body", String(design.type.leading));
+  el.style.setProperty("--leading-display", String(design.type.leadingDisplay));
+  el.style.setProperty("--leading-title", String(design.type.leadingTitle));
   el.style.setProperty("--tracking-display", `${design.type.tracking}em`);
-  el.style.setProperty("--tracking-title", `${design.type.tracking * 0.7}em`);
-  el.style.setProperty("--tracking-eyebrow", "0.16em");
+  el.style.setProperty("--tracking-title", `${design.type.trackingTitle}em`);
+  el.style.setProperty("--tracking-body", `${design.type.trackingBody}em`);
+  el.style.setProperty("--tracking-eyebrow", `${design.type.trackingEyebrow}em`);
 
   el.style.setProperty("--spacing", `${design.space.base}px`);
   el.style.setProperty("--space-page", `${design.space.page}px`);
@@ -643,6 +1108,7 @@ export function applyDesign(doc: Document, design: DesignState, active: Mode) {
   el.style.setProperty("--radius-xl", `${radius.xl}px`);
   el.style.setProperty("--radius-2xl", `${radius.xl2}px`);
   el.style.setProperty("--radius-3xl", `${radius.xl3}px`);
+  el.style.setProperty("--radius-control", `${radius.xl}px`);
 }
 
 export function readColor(input: string): { hex: string; alpha: number } {

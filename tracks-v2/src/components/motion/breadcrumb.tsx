@@ -22,7 +22,7 @@ import {
   type ComponentPropsWithRef,
   type ReactElement,
 } from "react";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { useHoverCapable } from "@/lib/hooks/use-hover-capable";
 import { EASE_OUT, SPRING_LAYOUT } from "@/lib/ease";
 import { cn } from "@/lib/utils";
@@ -235,7 +235,7 @@ export function BreadcrumbEllipsis({ children, className, label = "Show hidden p
   }, [open]);
 
   return (
-    <MorphPopover open={open && present} onOpenChange={setOpen} className={cn(className)}>
+    <Popover open={open && present} onOpenChange={setOpen} side={placement.side} align={placement.align} panelRadius={10} className={cn(className)}>
       <span
         onPointerEnter={(event) => {
           cancelClose();
@@ -246,14 +246,13 @@ export function BreadcrumbEllipsis({ children, className, label = "Show hidden p
         }}
         onPointerLeave={leave}
       >
-        <MorphPopoverTrigger>
+        <PopoverTrigger>
           <button
             ref={trigger}
             type="button"
             aria-label={label}
             className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            // Enter and Space open through MorphPopoverTrigger, which moves
-            // focus to the first path itself. ArrowDown opens without a click.
+            // ArrowDown opens the menu and moves focus to the first path.
             onKeyDown={(event) => {
               if (event.key === "ArrowDown") {
                 event.preventDefault();
@@ -265,8 +264,8 @@ export function BreadcrumbEllipsis({ children, className, label = "Show hidden p
           >
             <Ellipsis aria-hidden="true" className="size-4" />
           </button>
-        </MorphPopoverTrigger>
-        <MorphPopoverContent align={placement.align} side={placement.side} radius={10} sideOffset={6} className="p-1.5">
+        </PopoverTrigger>
+        <PopoverContent className="max-w-none p-1.5">
           <BreadcrumbOverflowPaths
             ref={panel}
             style={{ width: placement.width - 14 }}
@@ -279,9 +278,9 @@ export function BreadcrumbEllipsis({ children, className, label = "Show hidden p
           >
             {children}
           </BreadcrumbOverflowPaths>
-        </MorphPopoverContent>
+        </PopoverContent>
       </span>
-    </MorphPopover>
+    </Popover>
   );
 }
 

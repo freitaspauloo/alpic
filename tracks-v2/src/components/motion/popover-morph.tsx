@@ -395,7 +395,7 @@ function MorphPopoverSurface({
 
   const progress = useMotionValue(0);
   const clipPath = useTransform(progress, (p) =>
-    clipAt(resolvedSide, align, radius, 92 * (1 - p)),
+    p >= 1 ? "none" : clipAt(resolvedSide, align, radius, 92 * (1 - p)),
   );
   const surfaceOpacity = useTransform(progress, [0, 0.15], [0, 1]);
   // Reduced motion has no travel, so a short fade carries the whole entrance
@@ -537,8 +537,8 @@ function MorphPopoverSurface({
           clipPath: reduce ? undefined : clipPath,
           borderRadius: radius,
           maxHeight: layout ? availableHeight : undefined,
-          overflowX: "hidden",
-          overflowY: "auto",
+          overflowX: "visible",
+          overflowY: "visible",
         }}
         className={cn(
           // The panel holds focus when nothing inside it can. An inset ring

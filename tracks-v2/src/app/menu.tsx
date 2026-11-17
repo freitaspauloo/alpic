@@ -1,24 +1,30 @@
-import type { LucideIcon } from "lucide-react";
+import { Check, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /*
- * Rows for menus inside a beUI MorphPopoverContent. beUI ships no standalone menu
- * primitive for popovers, so these reuse the exact row styles of AI Sidebar's own
- * row menu (ResourceMenuAction) to stay visually identical.
+ * Same row and surface as the product Select: a background panel, muted fill
+ * on the current row, and a check. No separate outline.
  */
+export const menuSurface = "border border-border bg-background shadow-lg";
+
+const rowClass =
+  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors";
 
 export function MenuAction({
   icon: Icon,
   onSelect,
   trailing,
   active,
+  check = true,
   children,
 }: {
   icon?: LucideIcon;
   onSelect: () => void;
   trailing?: ReactNode;
   active?: boolean;
+  /** Draw the select check. Submenu rows keep the fill and pass false. */
+  check?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -27,13 +33,15 @@ export function MenuAction({
       onClick={onSelect}
       aria-current={active || undefined}
       className={cn(
-        "flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
-        active && "bg-muted",
+        rowClass,
+        "text-foreground",
+        active ? "bg-muted" : "hover:bg-muted focus-visible:bg-muted",
       )}
     >
-      {Icon ? <Icon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" /> : null}
+      {Icon ? <Icon aria-hidden="true" className="size-3.5 shrink-0" /> : null}
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      {trailing ? <span className="flex shrink-0 items-center text-muted-foreground">{trailing}</span> : null}
+      {trailing ? <span className="flex shrink-0 items-center">{trailing}</span> : null}
+      {active && check ? <Check aria-hidden="true" className="size-3.5 shrink-0" /> : null}
     </button>
   );
 }

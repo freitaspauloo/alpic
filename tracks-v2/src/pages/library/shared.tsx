@@ -1,6 +1,6 @@
-import { Fragment, useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useId, useRef, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
 import { MoreHorizontal, Plus, Search, X, type LucideIcon } from "lucide-react";
-import { MenuAction, MenuSeparator } from "@/app/menu";
+import { MenuAction, MenuSeparator, menuSurface } from "@/app/menu";
 import { PageSection } from "@/app/page-layout";
 import { useToast } from "@/app/toast";
 import { Button } from "@/components/motion/button/base";
@@ -12,7 +12,7 @@ import {
 } from "@/components/motion/center-morph-modal";
 import { Drawer } from "@/components/motion/drawer";
 import { Input } from "@/components/motion/input";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { Table, type TableColumn } from "@/components/motion/table";
 import { Tooltip } from "@/components/motion/tooltip";
 import { cn } from "@/lib/utils";
@@ -83,10 +83,12 @@ export function IconTile({
   icon: Icon,
   size = "md",
   className,
+  strokeWidth,
 }: {
-  icon: LucideIcon;
+  icon: LucideIcon | ComponentType<{ className?: string; strokeWidth?: number }>;
   size?: "md" | "lg";
   className?: string;
+  strokeWidth?: number;
 }) {
   return (
     <span
@@ -97,7 +99,7 @@ export function IconTile({
         className,
       )}
     >
-      <Icon className="size-4" />
+      <Icon className="size-4" strokeWidth={strokeWidth} />
     </span>
   );
 }
@@ -247,13 +249,13 @@ export type RowAction = {
 export function RowActions({ name, actions }: { name: string; actions: RowAction[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <MorphPopover open={open} onOpenChange={setOpen}>
-      <MorphPopoverTrigger>
+    <Popover open={open} onOpenChange={setOpen} side="bottom" align="end" panelRadius={12}>
+      <PopoverTrigger>
         <Button variant="ghost" size="icon" aria-label={`Actions for ${name}`}>
           <MoreHorizontal aria-hidden="true" className="size-4" />
         </Button>
-      </MorphPopoverTrigger>
-      <MorphPopoverContent side="bottom" align="end" sideOffset={6} radius={12} className="w-52 p-1.5">
+      </PopoverTrigger>
+      <PopoverContent className={cn("w-52 max-w-none p-1.5", menuSurface)}>
         {actions.map((action) => (
           <Fragment key={action.label}>
             {action.separated ? <MenuSeparator /> : null}
@@ -264,12 +266,12 @@ export function RowActions({ name, actions }: { name: string; actions: RowAction
                 action.onSelect();
               }}
             >
-              {action.destructive ? <span className="text-destructive">{action.label}</span> : action.label}
+              {action.label}
             </MenuAction>
           </Fragment>
         ))}
-      </MorphPopoverContent>
-    </MorphPopover>
+      </PopoverContent>
+    </Popover>
   );
 }
 

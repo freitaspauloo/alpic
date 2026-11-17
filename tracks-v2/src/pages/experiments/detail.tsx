@@ -189,7 +189,7 @@ function Detail({ experiment }: { experiment: Experiment }) {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-muted text-muted-foreground">
                 <FolderGit2 aria-hidden="true" className="size-4" />
               </span>
               <div className="flex min-w-0 flex-col">
@@ -434,7 +434,7 @@ function Agents({ orgId, experiment }: { orgId: string; experiment: Experiment }
         <Card key={agent.id} size="compact">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <span className="grid size-7 place-items-center rounded-lg bg-primary/10 text-primary">
+              <span className="grid size-7 place-items-center rounded-lg border border-border bg-muted text-muted-foreground">
                 <Bot aria-hidden="true" className="size-4" />
               </span>
               {agent.name}

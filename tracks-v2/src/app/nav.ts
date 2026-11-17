@@ -1,16 +1,5 @@
-import {
-  ChartLine,
-  FlaskConical,
-  FolderGit2,
-  Folder,
-  Play,
-  Plus,
-  Server,
-  Sparkles,
-  SquareTerminal,
-  type LucideIcon,
-} from "lucide-react";
 import type { SidebarResource } from "@/components/agents/ai-sidebar";
+import { DEFAULT_ICON_SETTINGS, NAV_ICON_SLOTS, resolveNavIcon, type AppIcon } from "@/design/icons";
 import type { State } from "@/data";
 
 /** The whole sidebar tree. Account pages (members, API keys, billing, settings) live in the user menu instead. */
@@ -37,17 +26,10 @@ export const NAV_PATHS: Record<string, string> = {
   analytics: "analytics",
 };
 
-export const NAV_ICONS: Record<string, LucideIcon> = {
-  "new-experiment": Plus,
-  experiments: FlaskConical,
-  runs: Play,
-  library: Folder,
-  repositories: FolderGit2,
-  skills: Sparkles,
-  "mcp-servers": Server,
-  "command-line-tools": SquareTerminal,
-  analytics: ChartLine,
-};
+/** Default nav icons before theme overrides. Prefer `resolveNavIcon` with `useDesign().icons`. */
+export const NAV_ICONS: Record<string, AppIcon> = Object.fromEntries(
+  NAV_ICON_SLOTS.map(({ id }) => [id, resolveNavIcon(id, DEFAULT_ICON_SETTINGS)]),
+);
 
 /** The items the collapsed icon rail shows. */
 export const RAIL_ITEMS = ["new-experiment", "experiments", "runs", LIBRARY_ID, "analytics"] as const;

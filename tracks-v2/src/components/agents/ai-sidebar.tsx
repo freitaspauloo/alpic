@@ -25,11 +25,8 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  MorphPopover,
-  MorphPopoverContent,
-  MorphPopoverTrigger,
-} from "@/components/motion/popover-morph";
+import { menuSurface } from "@/app/menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { EASE_OUT, SPRING_LAYOUT } from "@/lib/ease";
 import { useTouchCapable } from "@/lib/hooks/use-touch-capable";
 import { cn } from "@/lib/utils";
@@ -318,7 +315,7 @@ function ResourceMenuAction({
     <button
       type="button"
       onClick={onSelect}
-      className="flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-xs text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
     >
       <Icon aria-hidden="true" className="size-3.5 shrink-0" />
       <span className="min-w-0 truncate">{children}</span>
@@ -507,7 +504,7 @@ function ResourceRow({
         !acceptsChildren && active && "bg-muted text-foreground",
         row.item.disabled && "cursor-not-allowed opacity-45",
       )}
-      style={{ paddingLeft: `${12 + row.depth * 16}px` }}
+      style={{ paddingLeft: `${16 + row.depth * 16}px` }}
     >
       <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center">
         {renderIcon?.(row.item) ?? defaultIcon(row.item, expanded)}
@@ -543,11 +540,14 @@ function ResourceRow({
       )}
 
       {editable && !renaming && !row.item.disabled ? (
-        <MorphPopover
+        <Popover
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
+          side="bottom"
+          align="end"
+          panelRadius={12}
         >
-          <MorphPopoverTrigger>
+          <PopoverTrigger>
             <button
               type="button"
               draggable={false}
@@ -563,17 +563,11 @@ function ResourceRow({
             >
               <MoreHorizontal aria-hidden="true" className="size-4" />
             </button>
-          </MorphPopoverTrigger>
-          <MorphPopoverContent
-            side="bottom"
-            align="end"
-            sideOffset={8}
-            radius={12}
-            className="w-40 p-1.5"
-          >
+          </PopoverTrigger>
+          <PopoverContent className={cn("w-40 max-w-none p-1.5", menuSurface)}>
             <div data-sidebar-resource-menu={row.item.id}>{menu}</div>
-          </MorphPopoverContent>
-        </MorphPopover>
+          </PopoverContent>
+        </Popover>
       ) : null}
     </motion.div>
   );

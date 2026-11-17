@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { NotFoundPage } from "./app/not-found";
 import { Shell } from "./app/shell";
+import { ComponentsTwo } from "./pages/components-2";
+import { DesignSystem } from "./pages/design-system";
 import { ApiKeys, Billing, Invitation, Members, Settings } from "./pages/account";
 import { AnalyticsHome, Sources, Traffic } from "./pages/analytics";
 import { ExperimentDetail, ExperimentEdit, Experiments, NewExperiment } from "./pages/experiments";
@@ -12,6 +14,9 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/design-system" element={<DesignSystem />} />
+      <Route path="/components" element={<ComponentsTwo />} />
+      <Route path="/components-2" element={<Navigate to="/components" replace />} />
       <Route path="/invitations/:invitation" element={<Invitation />} />
       <Route path="/:org" element={<Shell />}>
         <Route index element={<Navigate to="experiments" replace />} />

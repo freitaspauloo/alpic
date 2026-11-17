@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, MoreHorizontal, Pencil, Play, SquareArrowOutUpRight, Trash2 } from "lucide-react";
-import { MenuAction, MenuSeparator } from "@/app/menu";
+import { MenuAction, MenuSeparator, menuSurface } from "@/app/menu";
 import { useToast } from "@/app/toast";
 import type { AnimatedBadgeStatus } from "@/components/motion/animated-badge";
 import { Button } from "@/components/motion/button/base";
@@ -11,7 +11,7 @@ import {
   CenterMorphModalClose,
   CenterMorphModalContent,
 } from "@/components/motion/center-morph-modal";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import {
   passRate,
   useOrgData,
@@ -130,13 +130,13 @@ export function ExperimentMenu({
     action?.();
   };
   return (
-    <MorphPopover open={open} onOpenChange={setOpen}>
-      <MorphPopoverTrigger>
+    <Popover open={open} onOpenChange={setOpen} side="bottom" align={align} panelRadius={12}>
+      <PopoverTrigger>
         <Button variant="ghost" size="icon" aria-label={`Actions for ${experiment.name}`}>
           <MoreHorizontal aria-hidden="true" className="size-4" />
         </Button>
-      </MorphPopoverTrigger>
-      <MorphPopoverContent side="bottom" align={align} radius={12} className="w-52 p-1.5">
+      </PopoverTrigger>
+      <PopoverContent className={`w-52 max-w-none p-1.5 ${menuSurface}`}>
         {onOpen ? (
           <MenuAction icon={SquareArrowOutUpRight} onSelect={run(onOpen)}>
             Open
@@ -159,10 +159,10 @@ export function ExperimentMenu({
         ) : null}
         <MenuSeparator />
         <MenuAction icon={Trash2} onSelect={run(onRemove)}>
-          <span className="text-destructive">Remove</span>
+          Remove
         </MenuAction>
-      </MorphPopoverContent>
-    </MorphPopover>
+      </PopoverContent>
+    </Popover>
   );
 }
 

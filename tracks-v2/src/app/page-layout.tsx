@@ -10,7 +10,9 @@ const WIDTH = {
 export interface PageProps {
   title: ReactNode;
   description?: ReactNode;
-  /** Primary page actions, right-aligned next to the title (beUI Buttons). */
+  /** Quiet status on the description line, opposite the description. */
+  meta?: ReactNode;
+  /** Primary page actions, right-aligned on the title line (beUI Buttons). */
   actions?: ReactNode;
   width?: keyof typeof WIDTH;
   children?: ReactNode;
@@ -18,13 +20,13 @@ export interface PageProps {
 }
 
 /** Every routed page renders inside one Page: header first, then sections stacked with gap-8. */
-export function Page({ title, description, actions, width = "default", children, className }: PageProps) {
+export function Page({ title, description, meta, actions, width = "default", children, className }: PageProps) {
   return (
     <div
       className={cn("mx-auto flex w-full flex-col", WIDTH[width], className)}
       style={{ gap: "var(--space-section)", padding: "var(--space-page)" }}
     >
-      <PageHeader title={title} description={description} actions={actions} />
+      <PageHeader title={title} description={description} meta={meta} actions={actions} />
       {children}
     </div>
   );
@@ -33,26 +35,34 @@ export function Page({ title, description, actions, width = "default", children,
 export interface PageHeaderProps {
   title: ReactNode;
   description?: ReactNode;
+  meta?: ReactNode;
   actions?: ReactNode;
 }
 
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+export function PageHeader({ title, description, meta, actions }: PageHeaderProps) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
-      <div className="flex min-w-0 flex-col gap-1">
+    <header className="flex items-center justify-between gap-8">
+      <div className="flex min-w-0 flex-col gap-1.5">
         <h1
-          className="font-semibold text-foreground"
-          style={{ fontSize: "var(--text-title)", letterSpacing: "var(--tracking-title)" }}
+          className="text-foreground"
+          style={{
+            fontSize: "var(--text-title)",
+            fontWeight: "var(--font-weight-display)",
+            lineHeight: 1,
+            letterSpacing: "var(--tracking-title)",
+          }}
         >
           {title}
         </h1>
-        {description ? <p className="max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
+        {description || meta ? (
+          <p className="text-sm leading-5 text-muted-foreground">
+            {description}
+            {description && meta ? <span className="px-2 text-border">·</span> : null}
+            {meta}
+          </p>
+        ) : null}
       </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center" style={{ gap: "var(--space-control)" }}>
-          {actions}
-        </div>
-      ) : null}
+      {actions ? <div className="flex h-9 shrink-0 items-center gap-2">{actions}</div> : null}
     </header>
   );
 }
@@ -73,7 +83,10 @@ export function PageSection({ title, description, actions, children, className }
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
             {title ? (
-              <h2 className="font-semibold text-foreground" style={{ fontSize: "var(--text-section)" }}>
+              <h2
+                className="text-foreground"
+                style={{ fontSize: "var(--text-section)", fontWeight: "var(--font-weight-display)", lineHeight: "var(--leading-title)" }}
+              >
                 {title}
               </h2>
             ) : null}
