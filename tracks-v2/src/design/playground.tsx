@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/motion/alert";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Button } from "@/components/motion/button/base";
 import { Card, CardAction, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/motion/card";
+import { Collapsible, CollapsibleContent, CollapsibleIndicator, CollapsibleTrigger } from "@/components/motion/collapsible";
 import {
   ColorPicker,
   ColorPickerAlpha,
@@ -25,11 +26,11 @@ import {
   ComboboxContent,
   ComboboxEmpty,
   ComboboxGroup,
-  ComboboxInput,
   ComboboxItem,
   ComboboxLabel,
   ComboboxList,
   ComboboxTrigger,
+  ComboboxValue,
 } from "@/components/motion/combobox";
 import { Input } from "@/components/motion/input";
 import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
@@ -77,6 +78,7 @@ import {
   writeColor,
 } from "./theme";
 import { EASE_OUT, SPRING_SWAP } from "@/lib/ease";
+import { cn } from "@/lib/utils";
 
 type Section = "color" | "type" | "icons" | "space" | "radius" | "hero";
 
@@ -115,6 +117,31 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function GroupTitle({ children }: { children: string }) {
   return <h2 className="text-xs font-medium tracking-widest text-muted-foreground uppercase">{children}</h2>;
+}
+
+/** One titled block, closed until asked. Opening one closes the others in its list. */
+function TokenGroup({
+  title,
+  open,
+  onOpenChange,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange} className={open ? "z-20" : undefined}>
+      <CollapsibleTrigger className="min-h-9 px-2 text-xs tracking-widest text-muted-foreground uppercase">
+        {title}
+        <CollapsibleIndicator />
+      </CollapsibleTrigger>
+      <CollapsibleContent className={open ? "overflow-visible" : undefined} contentClassName="flex flex-col gap-3 pt-2">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 function Slider({
@@ -174,10 +201,10 @@ function OptionPicker({
   return (
     <Field label={label}>
       <Combobox value={value} onValueChange={onValueChange} disabled={disabled}>
-        <ComboboxTrigger className="h-8 min-w-0 rounded-[var(--radius-control)]">
-          <ComboboxInput aria-label={label} placeholder={label} />
+        <ComboboxTrigger className="h-8 min-w-0 cursor-pointer rounded-[var(--radius-control)]">
+          <ComboboxValue placeholder={label} />
         </ComboboxTrigger>
-        <ComboboxContent className="z-[70]">
+        <ComboboxContent className="z-[10000]">
           <ComboboxList ariaLabel={label}>
             {groups.map((group) => (
               <ComboboxGroup key={group || "all"}>
@@ -305,6 +332,8 @@ function TypeSection() {
   const sansFile = useRef<HTMLInputElement>(null);
   const monoFile = useRef<HTMLInputElement>(null);
   const [note, setNote] = useState("");
+  const [group, setGroup] = useState<string | null>(null);
+  const show = (title: string) => (open: boolean) => setGroup(open ? title : null);
   const sansFonts = [
     ...SANS_FONTS,
     ...uploaded.filter((font) => font.role === "sans").map((font) => ({ id: font.file, label: font.family, value: fontStack(font) })),
@@ -333,110 +362,115 @@ function TypeSection() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <GroupTitle>Family</GroupTitle>
-      <OptionPicker
-        label="Sans"
-        value={design.type.sans}
-        onValueChange={(sans) => setType({ sans })}
-        options={sansFonts.map((font) => ({
-          value: font.value,
-          label: font.label,
-          group: SERIF.has(font.id) ? "Serif" : "Sans",
-        }))}
-      />
-      <Field label="Weight">
-        <Select
-          value={String(design.type.weight)}
-          onValueChange={(value) => {
-            const weight = Number(value);
-            setType({ weight, displayWeight: weight });
+    <div className="flex flex-col gap-1">
+      <TokenGroup title="Family" open={group === "Family"} onOpenChange={show("Family")}>
+        <OptionPicker
+          label="Sans"
+          value={design.type.sans}
+          onValueChange={(sans) => setType({ sans })}
+          options={sansFonts.map((font) => ({
+            value: font.value,
+            label: font.label,
+            group: SERIF.has(font.id) ? "Serif" : "Sans",
+          }))}
+        />
+        <Field label="Weight">
+          <Select
+            value={String(design.type.weight)}
+            onValueChange={(value) => {
+              const weight = Number(value);
+              setType({ weight, displayWeight: weight });
+            }}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Weight" />
+            </SelectTrigger>
+            <SelectContent>
+              {FONT_WEIGHTS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <TypeNumber
+            label="Line height"
+            value={design.type.leading}
+            onCommit={(leading) => setType({ leading, leadingDisplay: leading, leadingTitle: leading })}
+          />
+          <TypeNumber
+            label="Tracking"
+            value={design.type.tracking}
+            onCommit={(tracking) => setType({ tracking, trackingTitle: tracking, trackingBody: tracking })}
+          />
+        </div>
+        <div>
+          <Button type="button" variant="ghost" size="sm" onClick={() => sansFile.current?.click()}>
+            Upload sans
+          </Button>
+          <input
+            ref={sansFile}
+            type="file"
+            accept=".woff2,.woff,.ttf,.otf"
+            className="hidden"
+            onChange={(event) => {
+              void addFont(event.target.files?.[0], "sans");
+              event.target.value = "";
+            }}
+          />
+        </div>
+      </TokenGroup>
+      <TokenGroup title="Mono" open={group === "Mono"} onOpenChange={show("Mono")}>
+        <OptionPicker
+          label="Mono"
+          value={design.type.mono}
+          onValueChange={(mono) => setType({ mono })}
+          options={monoFonts.map((font) => ({ value: font.value, label: font.label }))}
+        />
+        <div>
+          <Button type="button" variant="ghost" size="sm" onClick={() => monoFile.current?.click()}>
+            Upload mono
+          </Button>
+          <input
+            ref={monoFile}
+            type="file"
+            accept=".woff2,.woff,.ttf,.otf"
+            className="hidden"
+            onChange={(event) => {
+              void addFont(event.target.files?.[0], "mono");
+              event.target.value = "";
+            }}
+          />
+        </div>
+        {note ? (
+          <Alert variant="destructive">
+            <AlertDescription>{note}</AlertDescription>
+          </Alert>
+        ) : null}
+      </TokenGroup>
+      <TokenGroup title="Scale" open={group === "Scale"} onOpenChange={show("Scale")}>
+        <Slider
+          id="type-ratio"
+          label="Scale"
+          value={design.type.ratio}
+          min={1.1}
+          max={1.5}
+          step={0.01}
+          display={design.type.ratio.toFixed(2)}
+          onChange={(ratio) => {
+            const scale = scaleRoles(design.type.body, ratio);
+            setType({ ratio, display: scale.display, title: scale.title, section: scale.section, eyebrow: scale.eyebrow, monoSize: scale.monoSize });
           }}
-        >
-          <SelectTrigger className="h-8">
-            <SelectValue placeholder="Weight" />
-          </SelectTrigger>
-          <SelectContent>
-            {FONT_WEIGHTS.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <TypeNumber
-          label="Line height"
-          value={design.type.leading}
-          onCommit={(leading) => setType({ leading, leadingDisplay: leading, leadingTitle: leading })}
         />
-        <TypeNumber
-          label="Tracking"
-          value={design.type.tracking}
-          onCommit={(tracking) => setType({ tracking, trackingTitle: tracking, trackingBody: tracking })}
-        />
-      </div>
-      <div>
-        <Button type="button" variant="ghost" size="sm" onClick={() => sansFile.current?.click()}>
-          Upload sans
-        </Button>
-        <input
-          ref={sansFile}
-          type="file"
-          accept=".woff2,.woff,.ttf,.otf"
-          className="hidden"
-          onChange={(event) => {
-            void addFont(event.target.files?.[0], "sans");
-            event.target.value = "";
-          }}
-        />
-      </div>
-      <OptionPicker
-        label="Mono"
-        value={design.type.mono}
-        onValueChange={(mono) => setType({ mono })}
-        options={monoFonts.map((font) => ({ value: font.value, label: font.label }))}
-      />
-      <div>
-        <Button type="button" variant="ghost" size="sm" onClick={() => monoFile.current?.click()}>
-          Upload mono
-        </Button>
-        <input
-          ref={monoFile}
-          type="file"
-          accept=".woff2,.woff,.ttf,.otf"
-          className="hidden"
-          onChange={(event) => {
-            void addFont(event.target.files?.[0], "mono");
-            event.target.value = "";
-          }}
-        />
-      </div>
-      {note ? (
-        <Alert variant="destructive">
-          <AlertDescription>{note}</AlertDescription>
-        </Alert>
-      ) : null}
-      <Slider
-        id="type-ratio"
-        label="Scale"
-        value={design.type.ratio}
-        min={1.1}
-        max={1.5}
-        step={0.01}
-        display={design.type.ratio.toFixed(2)}
-        onChange={(ratio) => {
-          const scale = scaleRoles(design.type.body, ratio);
-          setType({ ratio, display: scale.display, title: scale.title, section: scale.section, eyebrow: scale.eyebrow, monoSize: scale.monoSize });
-        }}
-      />
-      <Slider id="type-display" label="Display" value={design.type.display} min={24} max={96} step={1} display={`${Math.round(design.type.display)} px`} onChange={(display) => setType({ display })} />
-      <Slider id="type-title" label="Title" value={design.type.title} min={16} max={64} step={1} display={`${Math.round(design.type.title)} px`} onChange={(title) => setType({ title })} />
-      <Slider id="type-section" label="Section" value={design.type.section} min={13} max={40} step={1} display={`${Math.round(design.type.section)} px`} onChange={(sectionSize) => setType({ section: sectionSize })} />
-      <Slider id="type-body" label="Body" value={design.type.body} min={11} max={24} step={1} display={`${Math.round(design.type.body)} px`} onChange={(body) => setType({ body })} />
-      <Slider id="type-eyebrow" label="Eyebrow" value={design.type.eyebrow} min={9} max={20} step={1} display={`${Math.round(design.type.eyebrow)} px`} onChange={(eyebrow) => setType({ eyebrow })} />
-      <Slider id="type-mono" label="Mono" value={design.type.monoSize} min={10} max={22} step={1} display={`${Math.round(design.type.monoSize)} px`} onChange={(monoSize) => setType({ monoSize })} />
+        <Slider id="type-display" label="Display" value={design.type.display} min={24} max={96} step={1} display={`${Math.round(design.type.display)} px`} onChange={(display) => setType({ display })} />
+        <Slider id="type-title" label="Title" value={design.type.title} min={16} max={64} step={1} display={`${Math.round(design.type.title)} px`} onChange={(title) => setType({ title })} />
+        <Slider id="type-section" label="Section" value={design.type.section} min={13} max={40} step={1} display={`${Math.round(design.type.section)} px`} onChange={(sectionSize) => setType({ section: sectionSize })} />
+        <Slider id="type-body" label="Body" value={design.type.body} min={11} max={24} step={1} display={`${Math.round(design.type.body)} px`} onChange={(body) => setType({ body })} />
+        <Slider id="type-eyebrow" label="Eyebrow" value={design.type.eyebrow} min={9} max={20} step={1} display={`${Math.round(design.type.eyebrow)} px`} onChange={(eyebrow) => setType({ eyebrow })} />
+        <Slider id="type-mono" label="Mono" value={design.type.monoSize} min={10} max={22} step={1} display={`${Math.round(design.type.monoSize)} px`} onChange={(monoSize) => setType({ monoSize })} />
+      </TokenGroup>
     </div>
   );
 }
@@ -672,8 +706,7 @@ function PlaygroundFooter({ setNaming, confirmDelete, setConfirmDelete, setName 
   );
 }
 
-export function DesignPlayground() {
-  const design = useDesign();
+export function useDesignKeyboardShortcuts() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target;
@@ -697,10 +730,26 @@ export function DesignPlayground() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+}
+
+/** Theme tokens and component previews. Used on `/design-system` and the landing popover. */
+export function DesignSystemWorkspace({
+  title = "Design system",
+  onClose,
+  className,
+}: {
+  title?: string;
+  onClose?: () => void;
+  className?: string;
+}) {
+  const design = useDesign();
   const { resolvedTheme } = useTheme();
-  const [open, setOpen] = useState(false);
   const [section, setSection] = useState<Section>("color");
   const [colorFormat, setColorFormat] = useState<ColorFormat>("hex");
+  const [colorGroup, setColorGroup] = useState<string | null>(null);
+  const [spaceOpen, setSpaceOpen] = useState(false);
+  const [radiusOpen, setRadiusOpen] = useState(false);
+  const [heroGroup, setHeroGroup] = useState<string | null>(null);
   const [naming, setNaming] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [themeName, setThemeName] = useState("");
@@ -708,15 +757,163 @@ export function DesignPlayground() {
   const mode = resolvedTheme === "dark" ? "dark" : "light";
   const palette = design[mode];
   const radius = radiusSteps(design.radius);
-  const panelRadius = Math.round(radius.xl2);
   const reduce = useReducedMotion();
   const setPalette = (patch: Partial<Palette>) => patchDesign({ [mode]: { ...palette, ...patch } });
   const setHero = (patch: Partial<HeroConfig>) => patchDesign({ hero: { ...design.hero, ...patch } });
 
   return (
+    <Card
+      size="compact"
+      className={cn(
+        "flex w-full flex-col gap-0 py-0",
+        onClose ? "max-h-[min(52rem,calc(100svh-4.5rem))] border-0 bg-transparent shadow-none" : "min-h-[min(52rem,calc(100svh-8rem))]",
+        className,
+      )}
+    >
+      <CardHeader className="border-b border-border py-3">
+        <CardTitle>{title}</CardTitle>
+        <CardAction className="gap-1">
+          <ThemeToggle
+            variant="circle"
+            className="size-8 rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted hover:text-foreground"
+            iconClassName="size-4"
+          />
+          {onClose ? (
+            <Button type="button" variant="ghost" size="icon" aria-label="Close design system" onClick={onClose}>
+              <X className="size-4" />
+            </Button>
+          ) : null}
+        </CardAction>
+      </CardHeader>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <motion.div
+          layout={!reduce}
+          className="relative z-30 shrink-0 border-b border-border px-4 py-3"
+          transition={{ layout: SPRING_SWAP }}
+        >
+          <ThemeField {...themeActions} />
+        </motion.div>
+        <Tabs value={section} onValueChange={(value) => setSection(value as Section)} variant="underline" className="flex min-h-0 flex-1 flex-col">
+          <TabsList className="px-2">
+            {SECTIONS.map((item) => (
+              <TabsTrigger key={item.id} value={item.id}>
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <CardContent className="min-h-0 flex-1 overflow-y-auto py-4">
+            <TabsContent value="color" className="mt-0 flex flex-col gap-1">
+              {COLOR_GROUPS.map((group) => (
+                <TokenGroup
+                  key={group.title}
+                  title={group.title}
+                  open={colorGroup === group.title}
+                  onOpenChange={(open) => setColorGroup(open ? group.title : null)}
+                >
+                  {group.keys.map((key) => (
+                    <ColorRow
+                      key={key}
+                      name={key}
+                      value={palette[key]}
+                      format={colorFormat}
+                      onFormat={setColorFormat}
+                      onChange={(value) => setPalette({ [key]: value })}
+                    />
+                  ))}
+                </TokenGroup>
+              ))}
+            </TabsContent>
+            <TabsContent value="type" className="mt-0">
+              <TypeSection />
+            </TabsContent>
+            <TabsContent value="icons" className="mt-0">
+              <IconSection />
+            </TabsContent>
+            <TabsContent value="space" className="mt-0 flex flex-col gap-1">
+              <TokenGroup title="Spacing" open={spaceOpen} onOpenChange={setSpaceOpen}>
+                <Slider id="space-base" label="Base unit" value={design.space.base} min={2} max={8} step={1} display={`${design.space.base} px`} onChange={(base) => patchDesign({ space: { ...design.space, base } })} />
+                <Slider id="space-page" label="Page" value={design.space.page} min={12} max={64} step={1} display={`${design.space.page} px`} onChange={(page) => patchDesign({ space: { ...design.space, page } })} />
+                <Slider id="space-section" label="Sections" value={design.space.section} min={8} max={64} step={1} display={`${design.space.section} px`} onChange={(sectionGap) => patchDesign({ space: { ...design.space, section: sectionGap } })} />
+                <Slider id="space-control" label="Controls" value={design.space.control} min={4} max={24} step={1} display={`${design.space.control} px`} onChange={(control) => patchDesign({ space: { ...design.space, control } })} />
+              </TokenGroup>
+            </TabsContent>
+            <TabsContent value="radius" className="mt-0 flex flex-col gap-1">
+              <TokenGroup title="Corners" open={radiusOpen} onOpenChange={setRadiusOpen}>
+                <Slider id="radius-base" label="Base" value={design.radius.base} min={0} max={32} step={1} display={`${Math.round(radius.lg)} px`} onChange={(base) => patchDesign({ radius: { ...design.radius, base } })} />
+                <Slider id="radius-ratio" label="Ratio" value={design.radius.ratio} min={1.15} max={2} step={0.01} display={design.radius.ratio.toFixed(2)} onChange={(ratio) => patchDesign({ radius: { ...design.radius, ratio } })} />
+                <div className="flex flex-col gap-3 border-t border-border pt-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Button</span>
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">xl {Math.round(radius.xl)} px</span>
+                  </div>
+                  <Button type="button" size="sm" className="w-fit">
+                    New experiment
+                  </Button>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Card</span>
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">2xl {Math.round(radius.xl2)} px</span>
+                  </div>
+                  <div className="h-12 border border-border bg-card" style={{ borderRadius: radius.xl2 }} />
+                </div>
+              </TokenGroup>
+            </TabsContent>
+            <TabsContent value="hero" className="mt-0 flex flex-col gap-1">
+              <TokenGroup title="Grid" open={heroGroup === "Grid"} onOpenChange={(open) => setHeroGroup(open ? "Grid" : null)}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground">Show grid</span>
+                  <Switch checked={design.hero.squares} onCheckedChange={(squares) => setHero({ squares })} ariaLabel="Show grid" />
+                </div>
+                {SQUARE_FIELDS.map((field) => (
+                  <Slider
+                    key={field.key}
+                    id={`squares-${field.key}`}
+                    label={field.label}
+                    value={design.hero[field.key]}
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    display={field.unit(design.hero[field.key])}
+                    onChange={(value) => setHero({ [field.key]: value })}
+                  />
+                ))}
+              </TokenGroup>
+              <TokenGroup title="Image" open={heroGroup === "Image"} onOpenChange={(open) => setHeroGroup(open ? "Image" : null)}>
+                {IMAGE_FIELDS.map((field) => (
+                  <Slider
+                    key={field.key}
+                    id={`image-${field.key}`}
+                    label={field.label}
+                    value={design.hero[field.key]}
+                    min={field.min}
+                    max={field.max}
+                    step={field.step}
+                    display={field.unit(design.hero[field.key])}
+                    onChange={(value) => setHero({ [field.key]: value })}
+                  />
+                ))}
+              </TokenGroup>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
+      </div>
+      <PlaygroundFooter {...themeActions} />
+    </Card>
+  );
+}
+
+/** Landing-only floating entry to the design system. */
+export function DesignPlayground() {
+  useDesignKeyboardShortcuts();
+  const design = useDesign();
+  const radius = radiusSteps(design.radius);
+  const panelRadius = Math.round(radius.xl2);
+  const reduce = useReducedMotion();
+  const [open, setOpen] = useState(false);
+
+  return (
     <MorphPopover open={open} onOpenChange={setOpen} className="fixed right-5 bottom-5 z-40">
       <MorphPopoverTrigger>
-        <Button type="button" size="icon" aria-label="Playground">
+        <Button type="button" size="icon" aria-label="Design system">
           <motion.span
             className="inline-flex"
             initial={false}
@@ -734,122 +931,7 @@ export function DesignPlayground() {
         radius={panelRadius}
         className="flex w-[min(24rem,calc(100vw-2rem))] max-h-[min(52rem,calc(100svh-4.5rem))] flex-col overflow-hidden p-0"
       >
-        <Card size="compact" className="flex max-h-[min(52rem,calc(100svh-4.5rem))] w-full flex-col gap-0 border-0 bg-transparent py-0 shadow-none">
-          <CardHeader className="border-b border-border py-3">
-            <CardTitle>Playground</CardTitle>
-            <CardAction className="gap-1">
-              <ThemeToggle
-                variant="circle"
-                className="size-8 rounded-[var(--radius-control)] text-muted-foreground hover:bg-muted hover:text-foreground"
-                iconClassName="size-4"
-              />
-              <Button type="button" variant="ghost" size="icon" aria-label="Close playground" onClick={() => setOpen(false)}>
-                <X className="size-4" />
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <div className="flex min-h-0 flex-1 flex-col">
-            <motion.div
-              layout={!reduce}
-              className="relative z-30 shrink-0 border-b border-border px-4 py-3"
-              transition={{ layout: SPRING_SWAP }}
-            >
-              <ThemeField {...themeActions} />
-            </motion.div>
-            <Tabs value={section} onValueChange={(value) => setSection(value as Section)} variant="underline" className="flex min-h-0 flex-1 flex-col">
-              <TabsList className="px-2">
-                {SECTIONS.map((item) => (
-                  <TabsTrigger key={item.id} value={item.id}>
-                    {item.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <CardContent className="min-h-0 flex-1 overflow-y-auto py-4">
-                <TabsContent value="color" className="mt-0 flex flex-col gap-5">
-                  {COLOR_GROUPS.map((group) => (
-                    <section key={group.title} className="flex flex-col gap-3">
-                      <GroupTitle>{group.title}</GroupTitle>
-                      {group.keys.map((key) => (
-                        <ColorRow
-                          key={key}
-                          name={key}
-                          value={palette[key]}
-                          format={colorFormat}
-                          onFormat={setColorFormat}
-                          onChange={(value) => setPalette({ [key]: value })}
-                        />
-                      ))}
-                    </section>
-                  ))}
-                </TabsContent>
-                <TabsContent value="type" className="mt-0">
-                  <TypeSection />
-                </TabsContent>
-                <TabsContent value="icons" className="mt-0">
-                  <IconSection />
-                </TabsContent>
-                <TabsContent value="space" className="mt-0 flex flex-col gap-4">
-                  <Slider id="space-base" label="Base unit" value={design.space.base} min={2} max={8} step={1} display={`${design.space.base} px`} onChange={(base) => patchDesign({ space: { ...design.space, base } })} />
-                  <Slider id="space-page" label="Page" value={design.space.page} min={12} max={64} step={1} display={`${design.space.page} px`} onChange={(page) => patchDesign({ space: { ...design.space, page } })} />
-                  <Slider id="space-section" label="Sections" value={design.space.section} min={8} max={64} step={1} display={`${design.space.section} px`} onChange={(sectionGap) => patchDesign({ space: { ...design.space, section: sectionGap } })} />
-                  <Slider id="space-control" label="Controls" value={design.space.control} min={4} max={24} step={1} display={`${design.space.control} px`} onChange={(control) => patchDesign({ space: { ...design.space, control } })} />
-                </TabsContent>
-                <TabsContent value="radius" className="mt-0 flex flex-col gap-4">
-                  <Slider id="radius-base" label="Base" value={design.radius.base} min={0} max={32} step={1} display={`${Math.round(radius.lg)} px`} onChange={(base) => patchDesign({ radius: { ...design.radius, base } })} />
-                  <Slider id="radius-ratio" label="Ratio" value={design.radius.ratio} min={1.15} max={2} step={0.01} display={design.radius.ratio.toFixed(2)} onChange={(ratio) => patchDesign({ radius: { ...design.radius, ratio } })} />
-                  <div className="flex flex-col gap-3 border-t border-border pt-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Button</span>
-                      <span className="font-mono text-xs text-muted-foreground tabular-nums">xl {Math.round(radius.xl)} px</span>
-                    </div>
-                    <Button type="button" size="sm" className="w-fit">
-                      New experiment
-                    </Button>
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Card</span>
-                      <span className="font-mono text-xs text-muted-foreground tabular-nums">2xl {Math.round(radius.xl2)} px</span>
-                    </div>
-                    <div className="h-12 border border-border bg-card" style={{ borderRadius: radius.xl2 }} />
-                  </div>
-                </TabsContent>
-                <TabsContent value="hero" className="mt-0 flex flex-col gap-5">
-                  <div className="flex items-center justify-between">
-                    <GroupTitle>Grid</GroupTitle>
-                    <Switch checked={design.hero.squares} onCheckedChange={(squares) => setHero({ squares })} ariaLabel="Show grid" />
-                  </div>
-                  {SQUARE_FIELDS.map((field) => (
-                    <Slider
-                      key={field.key}
-                      id={`squares-${field.key}`}
-                      label={field.label}
-                      value={design.hero[field.key]}
-                      min={field.min}
-                      max={field.max}
-                      step={field.step}
-                      display={field.unit(design.hero[field.key])}
-                      onChange={(value) => setHero({ [field.key]: value })}
-                    />
-                  ))}
-                  <GroupTitle>Image</GroupTitle>
-                  {IMAGE_FIELDS.map((field) => (
-                    <Slider
-                      key={field.key}
-                      id={`image-${field.key}`}
-                      label={field.label}
-                      value={design.hero[field.key]}
-                      min={field.min}
-                      max={field.max}
-                      step={field.step}
-                      display={field.unit(design.hero[field.key])}
-                      onChange={(value) => setHero({ [field.key]: value })}
-                    />
-                  ))}
-                </TabsContent>
-              </CardContent>
-            </Tabs>
-          </div>
-          <PlaygroundFooter {...themeActions} />
-        </Card>
+        <DesignSystemWorkspace title="Design system" onClose={() => setOpen(false)} />
       </MorphPopoverContent>
     </MorphPopover>
   );

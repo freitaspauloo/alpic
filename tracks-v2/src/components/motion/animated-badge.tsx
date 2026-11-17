@@ -35,6 +35,8 @@ export interface AnimatedBadgeProps extends Omit<
   HTMLMotionProps<"span">,
   "children"
 > {
+  /** Use the application success and warning tokens. */
+  semantic?: boolean;
   status?: AnimatedBadgeStatus;
   size?: AnimatedBadgeSize;
   children?: ReactNode;
@@ -117,6 +119,7 @@ const REST = { opacity: 1, y: 0, filter: "blur(0px)" } as const;
 const REST_EXIT = { opacity: 0, transition: { duration: 0 } } as const;
 
 export function AnimatedBadge({
+  semantic = false,
   status = "neutral",
   size = "md",
   children,
@@ -148,9 +151,9 @@ export function AnimatedBadge({
       transition={SPRING_LAYOUT}
       style={style}
       className={cn(
-        "relative inline-flex shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full border font-medium tabular-nums",
+        "relative inline-flex shrink-0 items-center overflow-hidden whitespace-nowrap rounded-[var(--radius-lg)] border font-medium tabular-nums",
         "transition-colors duration-300",
-        STATUS_CLASS[status],
+        semantic && status === "success" ? "border-success/30 bg-success/10 text-success" : semantic && status === "warning" ? "border-warning/30 bg-warning/10 text-warning" : STATUS_CLASS[status],
         SIZE_CLASS[size],
         className,
       )}
@@ -161,7 +164,7 @@ export function AnimatedBadge({
       {pulse && !reduce ? (
         <motion.span
           aria-hidden
-          className="absolute inset-0 rounded-full bg-current"
+          className="absolute inset-0 rounded-[inherit] bg-current"
           initial={{ opacity: 0.06 }}
           animate={{ opacity: [0.06, 0.18, 0.06] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}

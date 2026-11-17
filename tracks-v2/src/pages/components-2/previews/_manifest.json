@@ -1,0 +1,442 @@
+[
+  {
+    "slug": "action-swap",
+    "previews": [
+      {
+        "title": "Cascade",
+        "name": "ActionSwapCascadePreview"
+      },
+      {
+        "title": "Blur",
+        "name": "ActionSwapBlurPreview"
+      },
+      {
+        "title": "Roll",
+        "name": "ActionSwapRollPreview"
+      }
+    ]
+  },
+  {
+    "slug": "adaptive-stepper",
+    "previews": [
+      {
+        "title": "",
+        "name": "AdaptiveStepperPreview"
+      }
+    ]
+  },
+  {
+    "slug": "alert",
+    "previews": [
+      {
+        "title": "",
+        "name": "AlertPreview"
+      }
+    ]
+  },
+  {
+    "slug": "animated-badge",
+    "previews": [
+      {
+        "title": "",
+        "name": "AnimatedBadgePreview"
+      }
+    ]
+  },
+  {
+    "slug": "number-animation",
+    "previews": [
+      {
+        "title": "Digit Swap",
+        "name": "DigitSwapPreview"
+      },
+      {
+        "title": "Number Ticker",
+        "name": "NumberTickerPreview"
+      },
+      {
+        "title": "Animated Number",
+        "name": "AnimatedNumberPreview"
+      }
+    ]
+  },
+  {
+    "slug": "animated-sidebar",
+    "previews": [
+      {
+        "title": "",
+        "name": "AnimatedSidebarPreview"
+      }
+    ]
+  },
+  {
+    "slug": "animated-toast-stack",
+    "previews": [
+      {
+        "title": "",
+        "name": "AnimatedToastStackPreview"
+      }
+    ]
+  },
+  {
+    "slug": "avatar-group",
+    "previews": [
+      {
+        "title": "",
+        "name": "AvatarGroupPreview"
+      }
+    ]
+  },
+  {
+    "slug": "breadcrumb",
+    "previews": [
+      {
+        "title": "",
+        "name": "BreadcrumbPreview"
+      }
+    ]
+  },
+  {
+    "slug": "button",
+    "previews": [
+      {
+        "title": "Metallic Button",
+        "name": "ButtonMetallicPreview"
+      },
+      {
+        "title": "Button",
+        "name": "ButtonBasePreview"
+      },
+      {
+        "title": "Stateful Button",
+        "name": "ButtonStatefulPreview"
+      },
+      {
+        "title": "Magnetic Button",
+        "name": "ButtonMagneticPreview"
+      }
+    ]
+  },
+  {
+    "slug": "card",
+    "previews": [
+      {
+        "title": "",
+        "name": "CardPreview"
+      }
+    ]
+  },
+  {
+    "slug": "center-morph-modal",
+    "previews": [
+      {
+        "title": "",
+        "name": "CenterMorphModalPreview"
+      }
+    ]
+  },
+  {
+    "slug": "checkbox",
+    "previews": [
+      {
+        "title": "Checkbox",
+        "name": "CheckboxPreview"
+      },
+      {
+        "title": "With Description",
+        "name": "CheckboxDescriptionPreview"
+      }
+    ]
+  },
+  {
+    "slug": "collapsible",
+    "previews": [
+      {
+        "title": "",
+        "name": "CollapsiblePreview"
+      }
+    ]
+  },
+  {
+    "slug": "color-picker",
+    "previews": [
+      {
+        "title": "",
+        "name": "ColorPickerPreview"
+      }
+    ]
+  },
+  {
+    "slug": "combobox",
+    "previews": [
+      {
+        "title": "",
+        "name": "ComboboxPreview"
+      }
+    ]
+  },
+  {
+    "slug": "command-palette",
+    "previews": [
+      {
+        "title": "",
+        "name": "CommandPalettePreview"
+      }
+    ]
+  },
+  {
+    "slug": "context-menu",
+    "previews": [
+      {
+        "title": "",
+        "name": "ContextMenuPreview"
+      }
+    ]
+  },
+  {
+    "slug": "drawer",
+    "previews": [
+      {
+        "title": "",
+        "name": "DrawerPreview"
+      }
+    ]
+  },
+  {
+    "slug": "expandable-tabs",
+    "previews": [
+      {
+        "title": "",
+        "name": "ExpandableTabsPreview"
+      }
+    ]
+  },
+  {
+    "slug": "expanding-arrow-button",
+    "previews": [
+      {
+        "title": "Expanding Arrow Button",
+        "name": "ExpandingArrowButtonPreview"
+      },
+      {
+        "title": "Hold Action Button",
+        "name": "HoldActionButtonPreview"
+      },
+      {
+        "title": "Slide Action Button",
+        "name": "SlideActionButtonPreview"
+      }
+    ]
+  },
+  {
+    "slug": "input",
+    "previews": [
+      {
+        "title": "",
+        "name": "InputPreview"
+      }
+    ]
+  },
+  {
+    "slug": "loader",
+    "previews": [
+      {
+        "title": "",
+        "name": "LoaderPreview"
+      }
+    ]
+  },
+  {
+    "slug": "not-found",
+    "previews": [
+      {
+        "title": "Glitch",
+        "name": "NotFoundGlitchPreview"
+      },
+      {
+        "title": "Magnetic",
+        "name": "NotFoundMagneticPreview"
+      },
+      {
+        "title": "Spotlight",
+        "name": "NotFoundSpotlightPreview"
+      },
+      {
+        "title": "Stacked",
+        "name": "NotFoundStackedPreview"
+      },
+      {
+        "title": "Terminal",
+        "name": "NotFoundTerminalPreview"
+      }
+    ]
+  },
+  {
+    "slug": "pagination",
+    "previews": [
+      {
+        "title": "",
+        "name": "PaginationPreview"
+      }
+    ]
+  },
+  {
+    "slug": "popover",
+    "previews": [
+      {
+        "title": "Gooey Popover",
+        "name": "PopoverPreview"
+      },
+      {
+        "title": "Morph Popover",
+        "name": "MorphPopoverPreview"
+      }
+    ]
+  },
+  {
+    "slug": "radio-group",
+    "previews": [
+      {
+        "title": "Radio Group",
+        "name": "RadioPreview"
+      },
+      {
+        "title": "With Description",
+        "name": "RadioDescriptionPreview"
+      }
+    ]
+  },
+  {
+    "slug": "range-slider",
+    "previews": [
+      {
+        "title": "Inline Slider",
+        "name": "InlineSliderPreview"
+      },
+      {
+        "title": "Range Slider",
+        "name": "RangeSliderPreview"
+      },
+      {
+        "title": "Fluid Slider",
+        "name": "RangeSliderFluidPreview"
+      },
+      {
+        "title": "Wave Slider",
+        "name": "RangeSliderWavePreview"
+      },
+      {
+        "title": "Bubble Slider",
+        "name": "RangeSliderBubblePreview"
+      },
+      {
+        "title": "Ruler Slider",
+        "name": "RangeSliderRulerPreview"
+      }
+    ]
+  },
+  {
+    "slug": "select",
+    "previews": [
+      {
+        "title": "Select",
+        "name": "SelectPreview"
+      },
+      {
+        "title": "Morph Select",
+        "name": "SelectMorphPreview"
+      }
+    ]
+  },
+  {
+    "slug": "shared-layout-background",
+    "previews": [
+      {
+        "title": "",
+        "name": "SharedLayoutBgPreview"
+      }
+    ]
+  },
+  {
+    "slug": "switch",
+    "previews": [
+      {
+        "title": "",
+        "name": "SwitchPreview"
+      }
+    ]
+  },
+  {
+    "slug": "table",
+    "previews": [
+      {
+        "title": "Data Table",
+        "name": "TablePreview"
+      },
+      {
+        "title": "Editable Table",
+        "name": "TableEditablePreview"
+      },
+      {
+        "title": "Async Table",
+        "name": "TableAsyncPreview"
+      }
+    ]
+  },
+  {
+    "slug": "tabs",
+    "previews": [
+      {
+        "title": "",
+        "name": "TabsPreview"
+      }
+    ]
+  },
+  {
+    "slug": "text-animation",
+    "previews": [
+      {
+        "title": "Text Scramble",
+        "name": "TextScramblePreview"
+      },
+      {
+        "title": "Dia Text Animation",
+        "name": "ChromaticTextRevealPreview"
+      },
+      {
+        "title": "Text Reveal",
+        "name": "TextRevealPreview"
+      },
+      {
+        "title": "Text Shimmer",
+        "name": "TextShimmerPreview"
+      },
+      {
+        "title": "Text Cascade",
+        "name": "TextCascadePreview"
+      }
+    ]
+  },
+  {
+    "slug": "theme-toggle",
+    "previews": [
+      {
+        "title": "",
+        "name": "ThemeTogglePreview"
+      }
+    ]
+  },
+  {
+    "slug": "tooltip",
+    "previews": [
+      {
+        "title": "Tooltip",
+        "name": "TooltipPreview"
+      },
+      {
+        "title": "Toolbar",
+        "name": "TooltipToolbarPreview"
+      }
+    ]
+  }
+]
