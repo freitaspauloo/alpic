@@ -1,0 +1,33 @@
+:root{
+  --alpic-white:#ffffff;
+  --alpic-light-lime:#f6ffed;
+  --alpic-lime:#e2ffc6;
+  --alpic-faded-lime:#deeadc;
+  --alpic-border-lime:#aebbb1;
+  --alpic-midnight-25:#f4faf9;
+  --alpic-midnight-50:#eaf4f3;
+  --alpic-midnight-75:#d8efec;
+  --alpic-midnight-100:#bfe9e5;
+  --alpic-midnight-200:#7ccdc6;
+  --alpic-midnight-300:#4fa9a2;
+  --alpic-midnight-400:#227f72;
+  --alpic-midnight-500:#1f665d;
+  --alpic-midnight-600:#1d524c;
+  --alpic-midnight-700:#123a37;
+  --alpic-midnight-800:#0a2221;
+  --alpic-midnight-900:#081c1b;
+  --alpic-midnight-925:#08181a;
+  --alpic-midnight-950:#051413;
+  --alpic-ice:#89f0ec;
+  --alpic-berry-50:#fff0f3;
+  --alpic-berry-100:#ffe2e8;
+  --alpic-berry-200:#ffcad7;
+  --alpic-berry-300:#ff9fb7;
+  --alpic-berry-400:#ff6992;
+  --alpic-berry-500:#ff3b76;
+  --alpic-berry-600:#e90060;
+  --alpic-berry-700:#c80850;
+  --alpic-berry-800:#a8094a;
+  --alpic-berry-900:#8f0c45;
+  --alpic-berry-950:#500122;
+}

@@ -1,0 +1,34 @@
+{
+  "sourceFile": "ZO8vcUgVwp8p0TaTpnRbiR",
+  "sourceSection": "9118:14035",
+  "shader": "CodeComponentId_55a4ca852373c81b69803326c5af7aa5f1af580b_8345",
+  "parameters": {
+    "algorithm": "Bayer 16x16",
+    "contrast": 1,
+    "levels": 8,
+    "mono": false,
+    "brightness": 100,
+    "pixelSize": 8,
+    "designWidth": 2944
+  },
+  "scenes": [
+    {
+      "file": "alpine-peak.png",
+      "node": "9116:14023",
+      "slot": "traffic",
+      "position": 0.45
+    },
+    {
+      "file": "alpine-lift.png",
+      "node": "9118:14026",
+      "slot": "tests",
+      "position": 0.4
+    },
+    {
+      "file": "alpine-lodge.png",
+      "node": "9118:14028",
+      "slot": "fix",
+      "position": 0.65
+    }
+  ]
+}

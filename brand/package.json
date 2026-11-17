@@ -1,0 +1,10 @@
+{
+  "name": "alpic-landing",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.cjs",
+    "check": "node --check dist/manifesto-mountain.js && node --check dist/manifesto-reveal.js && node --check dist/main.js && node --check dist/agent-readiness.js && node --check dist/preview-data-fields.js && node --check server.cjs && node --check dist/mountain-animation.js && node --check dist/figma-dither.js && node --check dist/hero-controls.js && node --check dist/mountain-fit.js && node --check dist/layer-transforms.js && node --check dist/dash-shuffle.js && node verify-prototype.cjs && node verify-animation.cjs"
+  },
+  "type": "module"
+}

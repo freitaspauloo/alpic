@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Alpic brand guide · draft 0.1</title>
+<meta name="description" content="A coherence system for the Alpic brand: mountain, squares, tracks, characters, colour and type.">
+<link rel="stylesheet" href="../brand-palette.css">
+<link rel="stylesheet" href="guide.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Mozilla+Text:wght@300;400&family=Roboto+Mono&display=swap" rel="stylesheet">
+<script type="module" src="guide.js"></script>
+</head>
+<body>
+
+<nav class="bar" aria-label="Guide sections">
+  <a class="bar-logo" href="#cover" aria-label="Alpic brand guide"><img src="../assets/group1.svg" alt="ALPIC"></a>
+  <ol>
+    <li><a href="#audit">00 Audit</a></li>
+    <li><a href="#focus">02 Focus</a></li>
+    <li><a href="#mountain">03 Mountain</a></li>
+    <li><a href="#squares">04 Squares</a></li>
+    <li><a href="#tracks">05 Tracks</a></li>
+    <li><a href="#characters">06 Characters</a></li>
+    <li><a href="#modes">07 Modes</a></li>
+    <li><a href="#type">08 Type</a></li>
+    <li><a href="#applications">09 Applications</a></li>
+    <li><a href="#rules">11 Do / don’t</a></li>
+    <li><a href="#cheatsheet">12 Cheat sheet</a></li>
+    <li><a href="v2/">V2</a></li>
+  </ol>
+</nav>
+
+<header class="cover" id="cover">
+  <div class="wrap cover-copy">
+    <p class="label">[ 01 — ALPIC BRAND GUIDE · DRAFT 0.1 ]</p>
+    <h1>What agents see, <span>made visible.</span></h1>
+    <p class="lead">Agents don’t read a page the way people do. They read it in pieces. The Alpic brand shows those pieces: squares that gather into a mountain, a product, a word.</p>
+    <p class="cover-note">A coherence system for the brand you already have. Same fonts, same colours, same elements, with one order of importance.</p>
+  </div>
+  <div class="cover-stage">
+    <p class="label">Daylight</p>
+    <canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-scale="1.08" data-y=".06" data-cell="8" data-motion="snow" data-trace="midnight-950" data-ridge="15" data-inside="26" aria-hidden="true"></canvas>
+  </div>
+  <div class="cover-stage night">
+    <p class="label">Night</p>
+    <canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-scale="1.08" data-y=".06" data-cell="8" data-motion="snow" data-ramp="dark" data-trace="midnight-25" data-ridge="15" data-inside="26" aria-hidden="true"></canvas>
+  </div>
+</header>
+
+<section class="part tint" id="audit">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 00 — AUDIT ]</p>
+      <h2>Five good elements, <span>no order.</span></h2>
+      <p class="lead">Each element works on its own. Together they compete, because nothing says which one leads. This is what the homepage does today.</p>
+    </header>
+
+    <ul class="audit">
+      <li><h3>Mountain</h3><p><b>Now</b> Carries the hero. The strongest image you have.</p><p><b>Clash</b> Ten treatments sit in the hero switcher, and three different mountains share one page: the colour Everest, the line peak behind the manifesto, the grain massif in the footer.</p></li>
+      <li><h3>Squares</h3><p><b>Now</b> Everywhere: hero dither, slope scene, customers field, traffic bars, test matrix.</p><p><b>Clash</b> Cell sizes run from about 4 to 8 px, across three dither matrices (4 × 4, 8 × 8, 16 × 16). They read as texture, not as one idea.</p></li>
+      <li><h3>Lines</h3><p><b>Now</b> Only the graph over the hero and the manifesto.</p><p><b>Clash</b> Nothing else uses them. The lift cable and the scanline plates are level lines, which the brief rules out.</p></li>
+      <li><h3>Skier sprites</h3><p><b>Now</b> Skiers, chairlift riders and a pine forest fill the agent-interface stage.</p><p><b>Clash</b> A literal resort scene, the loudest thing after the hero. The lift and lodge pictures in the readiness rows repeat it.</p></li>
+      <li><h3>Colour and type</h3><p><b>Now</b> The palette and the three typefaces are solid.</p><p><b>Clash</b> 68 colour values in the homepage CSS are not in the palette. Body copy switches between Inter and Mozilla Text. Sign up is white on berry at 12 px, a contrast of 3.42:1.</p></li>
+    </ul>
+
+    <h3 class="sub">Ten heroes in one switcher</h3>
+    <ul class="strip">
+      <li><img loading="lazy" src="../assets/hero-mountains/dither.png" alt=""><span>Dither</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/photo.png" alt=""><span>Photo</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/iridescent.png" alt=""><span>Iridescent</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/scanline.png" alt=""><span>Scanline</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/lines.png" alt=""><span>Lines</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/blocks.png" alt=""><span>Blocks</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/pixels.png" alt=""><span>Pixels</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/glitch.png" alt=""><span>Glitch</span></li>
+      <li><img loading="lazy" src="../assets/hero-mountains/anaglyph.png" alt=""><span>Anaglyph</span></li>
+      <li><img loading="lazy" src="../assets/everest11.png" alt=""><span>Live</span></li>
+    </ul>
+
+    <h3 class="sub">Colours on the homepage that are not in the palette <span class="tag file">12 of 68</span></h3>
+    <ul class="chips">
+      <li style="--c:#000000">#000000</li><li style="--c:#efefef">#EFEFEF</li><li style="--c:#f8f8f8">#F8F8F8</li><li style="--c:#d2d2d2">#D2D2D2</li>
+      <li style="--c:#919191">#919191</li><li style="--c:#dddddd">#DDDDDD</li><li style="--c:#cbd4d3">#CBD4D3</li><li style="--c:#576b63">#576B63</li>
+      <li style="--c:#69bfbb">#69BFBB</li><li style="--c:#0b1c1b">#0B1C1B</li><li style="--c:#e72e66">#E72E66</li><li style="--c:#c5ddd9">#C5DDD9</li>
+    </ul>
+
+    <h3 class="sub">Proposed hierarchy</h3>
+    <ol class="tiers">
+      <li><i style="--s:96px"></i><div><p class="label">HERO</p><h4>The square</h4><p>The one idea. Everything else is made of it or revealed by it. One reveal per view.</p></div></li>
+      <li><i style="--s:64px"></i><div><p class="label">SUBJECT</p><h4>The mountain</h4><p>What the squares reveal most often. A recipe that fits any peak, not one fixed illustration.</p></div></li>
+      <li><i style="--s:40px"></i><div><p class="label">SUPPORT</p><h4>Tracks and type</h4><p>Irregular diagonals that run from square to square. Three typefaces, one job each.</p></div></li>
+      <li><i class="berry" style="--s:16px"></i><div><p class="label">ACCENT</p><h4>Berry, the arrow, one skier</h4><p>Small doses. One berry phrase, one ↗, at most one sprite per view.</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="part" id="focus">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 02 — FOCUS ]</p>
+      <h2>Keep the mountain. <span>Lead with the square.</span></h2>
+      <p class="lead">Nothing new is added. The work is deciding what leads, what supports and what goes.</p>
+    </header>
+
+    <div class="triage">
+      <div><p class="label">KEEP</p><ul class="rules">
+        <li>The colour Everest with its trace, as the flagship image.</li>
+        <li>Squares as data: the traffic bars and the test matrix.</li>
+        <li>The slow dissolve in the footer. It is the idea in motion.</li>
+        <li>The ↗ arrow and the bracket labels.</li>
+      </ul></div>
+      <div><p class="label">SCALE BACK</p><ul class="rules">
+        <li>Ten hero treatments become one recipe and five variants.</li>
+        <li>Cell sizes snap to three steps.</li>
+        <li>A crowd of sprites becomes one, used as punctuation.</li>
+        <li>Berry becomes one accent per view.</li>
+      </ul></div>
+      <div><p class="label">DROP</p><ul class="rules no">
+        <li>Chairlifts, lodges, pines and the lift cable.</li>
+        <li>Blur, glitch, chromatic split and scanline plates.</li>
+        <li>A second mountain in the same view.</li>
+        <li>Greys and teals that are not in the palette.</li>
+      </ul></div>
+    </div>
+
+    <h3 class="sub">Personality dial <span class="tag guess">Proposal</span></h3>
+    <ol class="dial">
+      <li><h4>Homepage and marketing</h4><span class="level" data-level="5"><i></i><i></i><i></i><i></i><i></i></span><p>Colour mountain, trace, slow motion. One sprite, away from the hero.</p></li>
+      <li><h4>Social</h4><span class="level" data-level="4"><i></i><i></i><i></i><i></i><i></i></span><p>Colour or mono mountain, one track, one sprite at most.</p></li>
+      <li><h4>Decks</h4><span class="level" data-level="3"><i></i><i></i><i></i><i></i><i></i></span><p>Mono mountain on the cover and dividers. Content slides use squares and type only.</p></li>
+      <li><h4>Product, docs, dev-facing</h4><span class="level" data-level="2"><i></i><i></i><i></i><i></i><i></i></span><p>Night mode, mono squares, tracks. No photo mountain. Sprites only in empty states.</p></li>
+      <li><h4>In-product UI</h4><span class="level" data-level="1"><i></i><i></i><i></i><i></i><i></i></span><p>Squares only where they carry data: status, progress, loading. No decoration.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="part tint" id="mountain">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 03 — MOUNTAIN ]</p>
+      <h2>One recipe. <span>Any peak.</span></h2>
+      <p class="lead">The mountain stops being one fixed illustration. It becomes four steps that turn any silhouette or photo into an Alpic mountain.</p>
+    </header>
+
+    <div class="row peaks" style="--min:230px">
+      <figure><div class="plate paper"><img class="fill base" loading="lazy" src="../assets/hero-mountains/everest.png" alt=""></div><figcaption><b>1 · Cut out</b> A peak with a clear summit, sky removed.</figcaption></figure>
+      <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4" data-ramp="day"></canvas></div><figcaption><b>2 · Square it</b> One lattice, one cell size, ordered 8 × 8 pattern.</figcaption></figure>
+      <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4"></canvas></div><figcaption><b>3 · Map colour</b> Balance the tones, then shade takes the midnight ramp and light takes the berry ramp.</figcaption></figure>
+      <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4" data-trace="midnight-950" data-ridge="12" data-inside="14"></canvas></div><figcaption><b>4 · Trace it</b> Optional. Nodes sit on the lattice, lines never run level.</figcaption></figure>
+    </div>
+
+    <h3 class="sub">Colour map <span class="tag file">Palette values</span></h3>
+    <div class="ramp">
+      <span style="--c:var(--alpic-midnight-950)"></span><span style="--c:var(--alpic-midnight-700)"></span><span style="--c:var(--alpic-midnight-300)"></span><span style="--c:var(--alpic-ice)"></span>
+      <span style="--c:var(--alpic-berry-600)"></span><span style="--c:var(--alpic-berry-500)"></span><span style="--c:var(--alpic-berry-50)"></span><span style="--c:var(--alpic-white)"></span>
+    </div>
+    <p class="ramp-key"><span>SHADE · MIDNIGHT 950 → ICE</span><span>LIGHT · BERRY 600 → WHITE</span></p>
+
+    <h3 class="sub">Charter shades <span class="tag file">Colors &amp; gradients</span></h3>
+    <div class="shade-board">
+      <div class="ramp" style="--n:11">
+        <span style="--c:var(--alpic-berry-50)"></span><span style="--c:var(--alpic-berry-100)"></span><span style="--c:var(--alpic-berry-200)"></span><span style="--c:var(--alpic-berry-300)"></span><span style="--c:var(--alpic-berry-400)"></span><span style="--c:var(--alpic-berry-500)"></span><span style="--c:var(--alpic-berry-600)"></span><span style="--c:var(--alpic-berry-700)"></span><span style="--c:var(--alpic-berry-800)"></span><span style="--c:var(--alpic-berry-900)"></span><span style="--c:var(--alpic-berry-950)"></span>
+      </div>
+      <div class="ramp" style="--n:14">
+        <span style="--c:var(--alpic-midnight-950)"></span><span style="--c:var(--alpic-midnight-925)"></span><span style="--c:var(--alpic-midnight-900)"></span><span style="--c:var(--alpic-midnight-800)"></span><span style="--c:var(--alpic-midnight-700)"></span><span style="--c:var(--alpic-midnight-600)"></span><span style="--c:var(--alpic-midnight-500)"></span><span style="--c:var(--alpic-midnight-400)"></span><span style="--c:var(--alpic-midnight-300)"></span><span style="--c:var(--alpic-midnight-200)"></span><span style="--c:var(--alpic-midnight-100)"></span><span style="--c:var(--alpic-midnight-75)"></span><span style="--c:var(--alpic-midnight-50)"></span><span style="--c:var(--alpic-midnight-25)"></span>
+      </div>
+      <div class="ramp" style="--n:6">
+        <span style="--c:var(--alpic-light-lime)"></span><span style="--c:var(--alpic-lime)"></span><span style="--c:var(--alpic-faded-lime)"></span><span style="--c:var(--alpic-border-lime)"></span><span style="--c:var(--alpic-ice)"></span><span style="--c:var(--alpic-white)"></span>
+      </div>
+    </div>
+    <p class="ramp-key"><span>BERRY 50 → 950 · MIDNIGHT 950 → 25</span><span>LIMES · ICE · WHITE</span></p>
+    <ul class="rules">
+      <li>Light lime is for backgrounds and buttons. Lime is the louder accent.</li>
+      <li>Berry 600 is the main accent, and it belongs mostly in daylight. Berry 300 is the skier’s pink.</li>
+      <li>Ice is the second accent, in daylight and night.</li>
+      <li>White is the daylight background. Midnight 950 is the night background.</li>
+    </ul>
+
+    <h3 class="sub">Five variants</h3>
+    <div class="row peaks" style="--min:210px">
+      <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4" data-trace="midnight-950" data-ridge="12" data-inside="14"></canvas></div><figcaption><b>Colour</b> Marketing hero. The only place berry goes big.</figcaption></figure>
+      <figure><div class="plate paper"><canvas data-fig="peak" data-massif="range" data-color="midnight-950" data-cell="4" data-sink=".06"></canvas></div><figcaption><b>Mono day</b> Decks, secondary pages, print.</figcaption></figure>
+      <figure><div class="plate night"><canvas data-fig="peak" data-massif="massif" data-kernel="grain" data-color="midnight-25" data-cell="4" data-sink=".06"></canvas></div><figcaption><b>Mono night</b> Docs, product, technical posts.</figcaption></figure>
+      <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4" data-only="trace" data-trace="midnight-300" data-ridge="16" data-inside="30"></canvas></div><figcaption><b>Trace</b> Behind text. No fill, so copy stays readable.</figcaption></figure>
+      <figure><div class="plate night"><canvas data-fig="peak" data-massif="spire" data-kernel="block" data-color="ice" data-cell="8" data-span=".8" data-sink=".04"></canvas></div><figcaption><b>Icon</b> Avatars, favicons, stickers. 24 cells across.</figcaption></figure>
+    </div>
+
+    <h3 class="sub">The same recipe on five silhouettes</h3>
+    <div class="row" style="--min:170px">
+      <figure><div class="plate paper" style="--ar:3/2"><canvas data-fig="peak" data-massif="horn" data-cell="4" data-wide="58"></canvas></div><figcaption>Horn</figcaption></figure>
+      <figure><div class="plate paper" style="--ar:3/2"><canvas data-fig="peak" data-massif="spire" data-cell="4" data-wide="78" data-tall="88"></canvas></div><figcaption>Spire</figcaption></figure>
+      <figure><div class="plate paper" style="--ar:3/2"><canvas data-fig="peak" data-massif="massif" data-cell="4" data-tall="72"></canvas></div><figcaption>Massif</figcaption></figure>
+      <figure><div class="plate paper" style="--ar:3/2"><canvas data-fig="peak" data-massif="range" data-cell="4" data-tall="52"></canvas></div><figcaption>Range</figcaption></figure>
+      <figure><div class="plate paper" style="--ar:3/2"><canvas data-fig="peak" data-massif="twins" data-cell="4" data-wide="88" data-tall="80"></canvas></div><figcaption>Twins</figcaption></figure>
+    </div>
+
+    <div class="split">
+      <div>
+        <h3 class="sub">Rules</h3>
+        <ul class="rules">
+          <li>One mountain per view.</li>
+          <li>The summit sits in the top third and is never cropped.</li>
+          <li>The base bleeds off the bottom edge, or off one side.</li>
+          <li>Text sits on the sky. If it must cross the mountain, switch to the trace variant.</li>
+          <li>At least 48 cells across for an image, 24 for an icon. <span class="tag guess">Proposal</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="sub">Never</h3>
+        <ul class="rules no">
+          <li>Blur, glitch, chromatic split or scanlines.</li>
+          <li>Colours outside the two ramps.</li>
+          <li>Two cell sizes inside one mountain.</li>
+          <li>Rotating or mirroring to fill a gap. Pick another crop.</li>
+          <li>A sprite standing on the mountain.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="part" id="squares">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 04 — SQUARES ]</p>
+      <h2>The square <span>reveals.</span></h2>
+      <p class="lead">An agent’s view resolves into ours, or ours dissolves into the agent’s. That is the only story the squares tell, and they tell it on anything.</p>
+    </header>
+
+    <div class="split">
+      <div>
+        <h3 class="sub first">Three sizes <span class="tag guess">Proposal</span></h3>
+        <div class="row" style="--min:120px">
+          <figure><div class="plate" style="--ar:1"><canvas data-fig="swatch" data-cell="4" data-level=".5"></canvas></div><figcaption><b>Fine · 4 px</b> Night mode, dense images.</figcaption></figure>
+          <figure><div class="plate" style="--ar:1"><canvas data-fig="swatch" data-cell="8" data-level=".5"></canvas></div><figcaption><b>Standard · 8 px</b> The default.</figcaption></figure>
+          <figure><div class="plate" style="--ar:1"><canvas data-fig="swatch" data-cell="16" data-level=".5"></canvas></div><figcaption><b>Coarse · 16 px</b> Icons, social, posters.</figcaption></figure>
+        </div>
+        <p class="note">Sizes are for a 1440 px layout and scale with it. The homepage uses sizes between 4 and 8 px today; 4 and 8 already cover them. Small figures in this guide are drawn at 4 px.</p>
+      </div>
+      <div>
+        <h3 class="sub first">Four densities <span class="tag guess">Proposal</span></h3>
+        <div class="row" style="--min:90px">
+          <figure><div class="plate" style="--ar:1"><canvas data-fig="swatch" data-level=".125"></canvas></div><figcaption><b>12%</b> Field</figcaption></figure>
+          <figure><div class="plate" style="--ar:1"><canvas data-fig="swatch" data-level=".25"></canvas></div><figcaption><b>25%</b> Texture</figcaption></figure>
+          <figure><div class="plate" style="--ar:1"><canvas data-fig="swatch" data-level=".5"></canvas></div><figcaption><b>50%</b> Tone</figcaption></figure>
+          <figure><div class="plate" style="--ar:1"><canvas data-fig="swatch" data-level="1"></canvas></div><figcaption><b>100%</b> Solid</figcaption></figure>
+        </div>
+        <p class="note">Image squares touch. Data squares, like the test matrix, keep a quarter-cell gap so each one can be counted.</p>
+      </div>
+    </div>
+
+    <h3 class="sub">Four reveals</h3>
+    <div class="row" style="--min:260px">
+      <figure><div class="plate night"><canvas data-fig="peak" data-massif="massif" data-kernel="grain" data-color="midnight-25" data-cell="4" data-motion="dissolve" data-sink=".04"></canvas></div><figcaption><b>A mountain · Snow</b> Squares fall in and thin out. 18 s loop, ambient.</figcaption></figure>
+      <figure><div class="plate"><canvas data-fig="plate" data-src="../assets/customers/kiwi-shot.jpg" data-cell="4" data-ramp="day" data-contrast="1.8" data-lift="-.2" data-motion="sweep" data-cycle="9000"></canvas></div><figcaption><b>A product screen · Sweep</b> The real screen arrives along a 55° front.</figcaption></figure>
+      <figure><div class="plate"><canvas data-fig="word" data-word="agents"></canvas></div><figcaption><b>Text · Settle</b> Coarse to fine in four steps, then the word.</figcaption></figure>
+      <figure><div class="plate"><canvas data-fig="plate" data-src="../assets/gear-helmet.jpg" data-cell="4" data-ramp="day" data-motion="develop" data-cycle="9000"></canvas></div><figcaption><b>A photo · Develop</b> Cells turn into the photo one by one.</figcaption></figure>
+    </div>
+
+    <div class="split">
+      <div>
+        <h3 class="sub">Motion</h3>
+        <ul class="rules">
+          <li>Squares never slide. They switch on, switch off or change size, always on the lattice.</li>
+          <li>Motion is stepped, about 12 frames a second, with no easing curves. <span class="tag file">Playground value</span></li>
+          <li>Ambient loops last 12 s or longer. Reveals triggered by a scroll or a click last under a second. <span class="tag guess">Proposal</span></li>
+          <li>One moving thing per view. With reduced motion on, show the resolved frame.</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="sub">Rules</h3>
+        <ul class="rules">
+          <li>One cell size per composition.</li>
+          <li>Every square sits on the same lattice, including trace nodes and track ends.</li>
+          <li>Squares are square. No circles, no rounded corners, no rotation.</li>
+          <li>A reveal always ends on something real: a peak, a screen, a word, a photo.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="part tint" id="tracks">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 05 — TRACKS ]</p>
+      <h2>Lines that <span>go somewhere.</span></h2>
+      <p class="lead">The ski feel lives here and nowhere else. A track is the path an agent took: it starts on a square, ends on a square, and never runs level or plumb.</p>
+    </header>
+
+    <div class="split wide">
+      <figure><div class="plate paper" style="--ar:14/11"><svg class="fill" data-angles viewBox="0 0 420 380" role="img" aria-label="Tracks run between 35 and 65 degrees. 55 degrees matches the stripes of the Alpic mark."></svg></div><figcaption><b>Angle</b> 35° to 65°, rising or falling. 55° is the stripe angle of the logo mark.</figcaption></figure>
+      <div>
+        <h3 class="sub first">Rules</h3>
+        <ul class="rules">
+          <li>Between 35° and 65° from level. <span class="tag guess">Proposal</span> The 55° comes from the mark itself. <span class="tag file">group1.svg</span></li>
+          <li>Irregular: no two tracks share an angle, a length or a spacing.</li>
+          <li>One gentle bend at most, like a carved turn.</li>
+          <li>Two weights: 1 px for traces, 2 px for a single feature track. <span class="tag guess">Proposal</span></li>
+          <li>A pair of lines one cell apart reads as ski tracks. Use it once per piece.</li>
+          <li>Three to five tracks per view. More than that becomes hatching.</li>
+        </ul>
+        <div class="weights">
+          <svg viewBox="0 0 160 96" data-tracks data-count="1" data-seed="11" data-weight="1" aria-hidden="true"></svg>
+          <svg viewBox="0 0 160 96" data-tracks data-count="1" data-seed="11" data-weight="2" aria-hidden="true"></svg>
+          <svg viewBox="0 0 160 96" data-tracks data-count="1" data-seed="11" data-weight="1" data-pair="8" aria-hidden="true"></svg>
+          <p class="label">TRACE · 1 PX</p><p class="label">TRACK · 2 PX</p><p class="label">PAIR · 1 CELL APART</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub">In use</h3>
+    <div class="row" style="--min:300px">
+      <figure>
+        <div class="plate paper" style="--ar:16/10">
+          <canvas data-fig="peak" data-massif="horn" data-cell="4" data-span=".62" data-x="1" data-sink=".06"></canvas>
+          <svg class="ink low" viewBox="0 0 360 230" data-tracks data-count="3" data-seed="5" aria-hidden="true"></svg>
+          <p class="plate-title">See how agents<br>use your product.</p>
+        </div>
+        <figcaption><b>Hero</b> Tracks cross the sky and lead the eye to the peak.</figcaption>
+      </figure>
+      <figure>
+        <div class="plate paper divider" style="--ar:16/10">
+          <div><p>Section one ends here.</p></div>
+          <svg viewBox="0 0 240 56" data-tracks data-count="5" data-seed="23" data-low="48" data-high="62" data-node="6" aria-hidden="true"></svg>
+          <div class="next"><p class="label">[ 02 — BUILD ]</p><p>The next one starts here.</p></div>
+        </div>
+        <figcaption><b>Section divider</b> A short run of tracks instead of a ruled line.</figcaption>
+      </figure>
+      <figure>
+        <div class="plate night" style="--ar:16/10">
+          <svg class="low wide" viewBox="0 0 640 230" data-tracks data-count="3" data-seed="42" data-lean="up" data-weight="2" data-pair="8" aria-hidden="true"></svg>
+          <p class="plate-title">Run #214.<br>Three calls, one fix.</p>
+        </div>
+        <figcaption><b>Social post</b> Tracks alone can carry a technical post.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="part" id="characters">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 06 — CHARACTERS ]</p>
+      <h2>One skier, <span>as punctuation.</span></h2>
+      <p class="lead">The sprite is the agent on its way. It shows up where the page can afford a smile, and it always rides a track.</p>
+    </header>
+
+    <div class="split wide">
+      <figure>
+        <div class="plate" style="--ar:14/9">
+          <svg class="fill ink" viewBox="0 0 560 360" aria-hidden="true">
+            <g fill="none" stroke="currentColor"><path vector-effect="non-scaling-stroke" d="M488 64Q310 120 232 228"/><path vector-effect="non-scaling-stroke" d="M496 72Q318 128 240 236"/></g>
+            <g fill="currentColor"><rect x="488" y="60" width="8" height="8"/></g>
+          </svg>
+          <img class="sprite" style="--x:42%;--y:64%" src="../assets/slope/skier-pink.svg" alt="Pixel skier on a track">
+        </div>
+        <figcaption><b>Placement</b> On a track, heading downhill, with empty space around it.</figcaption>
+      </figure>
+      <div>
+        <h3 class="sub first">Allowed</h3>
+        <ul class="rules">
+          <li>Empty states, 404, loading and success moments.</li>
+          <li>Social posts and the last slide of a deck.</li>
+          <li>Once on the homepage, well below the hero.</li>
+        </ul>
+        <h3 class="sub">Not allowed</h3>
+        <ul class="rules no">
+          <li>The hero, the nav, pricing, docs content, data views.</li>
+          <li>In the same frame as the colour mountain.</li>
+          <li>In groups. Chairlifts, trees and lodges are gone.</li>
+        </ul>
+        <h3 class="sub">Size and colour</h3>
+        <ul class="rules">
+          <li>The sprite is about 41 × 38 pixels. <span class="tag file">skier-pink.svg</span> Show it at 1× or 2× so its pixels stay square. <span class="tag guess">Proposal</span></li>
+          <li>Berry on light, white on dark. One sprite, one colour.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="part tint" id="modes">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 07 — LIGHT AND DARK ]</p>
+      <h2>Daylight for people. <span>Night for builders.</span></h2>
+      <p class="lead">Keep both, and let the audience choose. A surface is one or the other. A long page may switch once, the way the homepage turns dark at the customers section.</p>
+    </header>
+
+    <div class="modes">
+      <div class="mode day">
+        <p class="label">DAYLIGHT · MARKETING, SALES, BUYERS</p>
+        <h3>See how agents use your product.</h3>
+        <div class="ratio" role="img" aria-label="Daylight colour ratio">
+          <span style="--w:72;--c:var(--alpic-white)"></span><span style="--w:14;--c:var(--alpic-midnight-50)"></span><span style="--w:9;--c:var(--alpic-midnight-950)"></span><span style="--w:4;--c:var(--alpic-ice)"></span><span style="--w:1;--c:var(--alpic-berry-500)"></span>
+        </div>
+        <p class="ratio-key">72 WHITE, MIDNIGHT 25 · 14 MIDNIGHT 50–100, LIME TINTS · 9 MIDNIGHT 950–700 · 4 ICE · 1 BERRY</p>
+        <ul class="pairs">
+          <li><span class="chip" style="--bg:var(--alpic-white);--fg:var(--alpic-midnight-950)">Aa</span><p>Midnight 950 on white<small>Headlines, body</small></p><b>18.82</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-midnight-25);--fg:var(--alpic-midnight-700)">Aa</span><p>Midnight 700 on midnight 25<small>Body, secondary</small></p><b>11.80</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-midnight-25);--fg:var(--alpic-midnight-400)">Aa</span><p>Midnight 400 on midnight 25<small>Lightest colour allowed for text</small></p><b>4.58</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-ice);--fg:var(--alpic-midnight-950)">Aa</span><p>Midnight 950 on ice<small>Primary button</small></p><b>14.10</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-white);--fg:var(--alpic-berry-500)">Aa</span><p>Berry 500 on white<small>Display sizes only, 24 px and up</small></p><b>3.42</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-white);--fg:var(--alpic-berry-600)">Aa</span><p>Berry 600 on white<small>Small berry text and links</small></p><b>4.53</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-berry-500);--fg:var(--alpic-midnight-950)">Aa</span><p>Midnight 950 on berry 500<small>Berry button. Replaces white on berry</small></p><b>5.50</b></li>
+        </ul>
+      </div>
+      <div class="mode dark">
+        <p class="label">NIGHT · PRODUCT, DOCS, DEVELOPERS</p>
+        <h3>Deploy your MCP server.</h3>
+        <div class="ratio" role="img" aria-label="Night colour ratio">
+          <span style="--w:74;--c:var(--alpic-midnight-950)"></span><span style="--w:12;--c:var(--alpic-midnight-700)"></span><span style="--w:9;--c:var(--alpic-midnight-25)"></span><span style="--w:4;--c:var(--alpic-ice)"></span><span style="--w:1;--c:var(--alpic-berry-500)"></span>
+        </div>
+        <p class="ratio-key">74 MIDNIGHT 950–800 · 12 MIDNIGHT 700–600 · 9 MIDNIGHT 25–100 · 4 ICE · 1 BERRY</p>
+        <ul class="pairs">
+          <li><span class="chip" style="--bg:var(--alpic-midnight-950);--fg:var(--alpic-midnight-25)">Aa</span><p>Midnight 25 on midnight 950<small>Headlines, body</small></p><b>17.82</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-midnight-950);--fg:var(--alpic-midnight-100)">Aa</span><p>Midnight 100 on midnight 950<small>Body, secondary</small></p><b>14.34</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-midnight-950);--fg:var(--alpic-midnight-300)">Aa</span><p>Midnight 300 on midnight 950<small>Labels, captions</small></p><b>6.75</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-midnight-950);--fg:var(--alpic-ice)">Aa</span><p>Ice on midnight 950<small>Links, highlights, code</small></p><b>14.10</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-midnight-950);--fg:var(--alpic-berry-500)">Aa</span><p>Berry 500 on midnight 950<small>Accent text, failures</small></p><b>5.50</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-ice);--fg:var(--alpic-midnight-950)">Aa</span><p>Midnight 950 on ice<small>Primary button</small></p><b>14.10</b></li>
+          <li><span class="chip" style="--bg:var(--alpic-midnight-950);--fg:var(--alpic-midnight-400)">Aa</span><p>Midnight 400 on midnight 950<small>Squares only, never text</small></p><b>3.90</b></li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Contrast ratios are calculated from the palette values. The colour ratios are a proposal. <span class="tag guess">Proposal</span> Alternative, if one mode has to win: daylight everywhere, with night kept for code blocks and the footer.</p>
+  </div>
+</section>
+
+<section class="part" id="type">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 08 — TYPE ]</p>
+      <h2>Three faces, <span>one job each.</span></h2>
+      <p class="lead">No new typefaces. The sizes below are the ones the homepage already uses.</p>
+    </header>
+
+    <ul class="specimen">
+      <li><p class="label">DISPLAY · MOZILLA TEXT 400 · 42–72 PX / 1.04 · −1.6 PX</p><p class="t-display">Your next user might <span>not be human.</span></p></li>
+      <li><p class="label">TITLE · MOZILLA TEXT 400 · 36–60 PX / 1.12 · −1.2 PX</p><p class="t-title">Two ways to get ready for AI agents</p></li>
+      <li><p class="label">LEAD · INTER 300 · 15–22 PX / 1.4</p><p class="t-lead">AI agents now search, compare and buy on behalf of your customers.</p></li>
+      <li><p class="label">BODY · INTER 300 · 14–18 PX / 1.5</p><p class="t-body">Track what agents do across your site, docs and MCP server, test them at scale and get a clear list of what to fix.</p></li>
+      <li><p class="label">LABEL · ROBOTO MONO 400 · 12 PX / 1.4 · +1.4 PX</p><p class="t-label">[ THE SHIFT ]</p></li>
+      <li><p class="label">BUTTON · INTER 400 · 10–16 PX · +0.32 PX</p><p><span class="button">TEST YOUR AGENT READINESS <span class="arrow">↗</span></span></p></li>
+    </ul>
+
+    <ul class="rules columns">
+      <li>Mozilla Text is for headlines. Body copy goes in Inter, small labels in Roboto Mono.</li>
+      <li>One berry phrase per headline, at the end.</li>
+      <li>Sentence case for headlines. Capitals only in labels and buttons.</li>
+      <li>Weights 300 and 400. Inter 500 only for emphasis inside UI.</li>
+      <li>Labels go in square brackets and stay under five words.</li>
+      <li>The ↗ arrow is the only directional glyph.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="part tint" id="applications">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 09 — APPLICATIONS ]</p>
+      <h2>The same five moves, <span>five places.</span></h2>
+      <p class="lead">Mockups built from this guide’s own rules. Copy comes from the homepage; data is illustrative.</p>
+    </header>
+
+    <figure class="feature">
+      <div class="app home">
+        <div class="app-nav"><img src="../assets/group1.svg" alt="ALPIC"><span>SOLUTIONS</span><span>DEVELOPERS</span><span>PRICING</span><b class="berry">SIGN UP <span class="arrow">↗</span></b></div>
+        <div class="app-copy">
+          <h3>Your next user<br>might <span>not be human.</span></h3>
+          <div><p>AI agents now search, compare and buy on behalf of your customers. Alpic shows you how they experience your product.</p><p class="app-actions"><b class="ice">TEST YOUR AGENT READINESS <span class="arrow">↗</span></b><b class="plain">BUILD YOUR AGENT INTERFACE <span class="arrow">↗</span></b></p></div>
+        </div>
+        <canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-scale="1.08" data-y=".06" data-cell="8" data-trace="midnight-950" data-ridge="15" data-inside="26" aria-hidden="true"></canvas>
+      </div>
+      <figcaption><b>Homepage hero</b> The landing mountain: squares on the peak, trace on top.</figcaption>
+    </figure>
+
+    <div class="row" style="--min:420px">
+      <figure>
+        <div class="app docs">
+          <p class="label">DOCS / CLI / DEPLOY</p>
+          <h3>Deploy your MCP server</h3>
+          <p>Ship from your terminal. Alpic builds it, hosts it and shows you how agents use it.</p>
+          <pre><i>$</i> alpic deploy</pre>
+          <canvas data-fig="peak" data-massif="range" data-kernel="grain" data-color="midnight-300" data-cell="4" data-span=".7" data-x="1" data-sink=".1" aria-hidden="true"></canvas>
+        </div>
+        <figcaption><b>Docs header</b> Night mode, mono mountain, mono label. Dial at 2.</figcaption>
+      </figure>
+      <figure>
+        <div class="app deck">
+          <p class="label">[ AGENT READINESS REVIEW ]</p>
+          <h3>How agents use<br><span>your product.</span></h3>
+          <p class="app-foot">ALPIC · NOVEMBER 2026</p>
+          <canvas data-fig="peak" data-massif="horn" data-color="midnight-950" data-cell="4" data-span=".6" data-x="1" data-sink=".08" aria-hidden="true"></canvas>
+          <svg class="ink low" viewBox="0 0 360 190" data-tracks data-count="1" data-seed="9" data-pair="8" aria-hidden="true"></svg>
+        </div>
+        <figcaption><b>Deck cover</b> Mono day mountain bleeding off the corner, one paired track.</figcaption>
+      </figure>
+    </div>
+
+    <div class="row" style="--min:320px">
+      <figure>
+        <div class="app social day">
+          <p class="label">[ AGENT READINESS ]</p>
+          <h3>Your next user might <span>not be human.</span></h3>
+          <img class="app-logo" src="../assets/group1.svg" alt="ALPIC">
+          <canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-scale="1.5" data-x=".3" data-y=".12" data-cell="7" aria-hidden="true"></canvas>
+        </div>
+        <figcaption><b>Social · marketing</b> Colour mountain at 16 px cells on a 1080 px post, daylight.</figcaption>
+      </figure>
+      <figure>
+        <div class="app social night">
+          <p class="label">[ 4 AGENTS × 14 RUNS ]</p>
+          <h3>Catch regressions before <span>your customers do.</span></h3>
+          <div class="matrix" aria-hidden="true"></div>
+          <img class="app-logo" src="../assets/logo-footer.svg" alt="ALPIC">
+        </div>
+        <figcaption><b>Social · technical</b> No mountain. Squares as data, berry marks the failures.</figcaption>
+      </figure>
+      <figure>
+        <div class="app social empty">
+          <svg class="fill ink" viewBox="0 0 400 400" aria-hidden="true"><g fill="none" stroke="currentColor"><path vector-effect="non-scaling-stroke" d="M304 72Q210 118 164 200"/><path vector-effect="non-scaling-stroke" d="M312 80Q218 126 172 208"/></g><rect x="304" y="68" width="8" height="8" fill="currentColor"/></svg>
+          <img class="sprite" style="--x:42%;--y:51%" src="../assets/slope/skier-pink.svg" alt="">
+          <h3>No runs yet.</h3>
+          <p>Run your first agent test to see it here.</p>
+        </div>
+        <figcaption><b>Empty state</b> The one place a sprite belongs in the product.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="part" id="ui">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 10 — ICONS AND UI · OPTIONAL ]</p>
+      <h2>Square corners, <span>square marks.</span></h2>
+      <p class="lead">Low priority. Four habits are enough to keep UI on brand until it gets its own pass.</p>
+    </header>
+    <div class="row ui" style="--min:240px">
+      <div><div class="ui-demo"><span class="button">GET EARLY ACCESS <span class="arrow">↗</span></span></div><p>Corners stay square. Buttons, cards, inputs, images.</p></div>
+      <div><div class="ui-demo"><span class="status pass"></span><span class="status fail"></span><span class="status wait"></span></div><p>Status is a square: midnight 300 passes, berry fails, border lime waits.</p></div>
+      <div><div class="ui-demo"><ul class="rules"><li>A clear list of what to fix</li></ul></div><p>List bullets are one square, the size of the lattice cell.</p></div>
+      <div><div class="ui-demo"><span class="arrow big">↗</span></div><p>One directional glyph, the berry ↗. Icons, when needed, are drawn on a 16-cell lattice.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="part tint" id="rules">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 11 — DO AND DON’T ]</p>
+      <h2>Six calls that <span>settle most cases.</span></h2>
+      <p class="lead">Left is on brand. Right is what the homepage sometimes does today.</p>
+    </header>
+
+    <div class="dd">
+      <div class="pair">
+        <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4"></canvas></div><figcaption class="do">One mountain per view</figcaption></figure>
+        <figure><div class="plate paper crowd"><img loading="lazy" src="../assets/hero-mountains/pixels.png" alt=""><img loading="lazy" src="../assets/hero-mountains/lines.png" alt=""><img loading="lazy" src="../assets/hero-mountains/photo.png" alt=""></div><figcaption class="dont">Three mountains, three styles</figcaption></figure>
+      </div>
+      <div class="pair">
+        <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4" data-ramp="day"></canvas></div><figcaption class="do">One cell size</figcaption></figure>
+        <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-ramp="day" data-mix="4,16"></canvas></div><figcaption class="dont">Mixed cell sizes</figcaption></figure>
+      </div>
+      <div class="pair">
+        <figure><div class="plate paper"><svg class="fill ink" viewBox="0 0 320 240" data-tracks data-count="4" data-seed="17" aria-hidden="true"></svg></div><figcaption class="do">Irregular diagonal tracks</figcaption></figure>
+        <figure><div class="plate paper"><svg class="fill ink" viewBox="0 0 320 240" aria-hidden="true"><g fill="none" stroke="currentColor"><path vector-effect="non-scaling-stroke" d="M0 60H320M0 120H320M0 180H320M80 0V240M160 0V240M240 0V240"/></g></svg></div><figcaption class="dont">Level and plumb rules, a grid</figcaption></figure>
+      </div>
+      <div class="pair">
+        <figure><div class="plate paper"><svg class="fill ink" viewBox="0 0 320 240" aria-hidden="true"><g fill="none" stroke="currentColor"><path vector-effect="non-scaling-stroke" d="M264 48Q170 84 124 150"/><path vector-effect="non-scaling-stroke" d="M272 56Q178 92 132 158"/></g><rect x="264" y="44" width="8" height="8" fill="currentColor"/></svg><img class="sprite small" style="--x:40%;--y:65%" src="../assets/slope/skier-pink.svg" alt=""></div><figcaption class="do">One sprite, on a track</figcaption></figure>
+        <figure><div class="plate paper resort"><img src="../assets/slope/chair-pink.svg" alt=""><img src="../assets/slope/skier-pink.svg" alt=""><img src="../assets/slope/skier-lime.svg" alt=""><img src="../assets/slope/chair-white.svg" alt=""><img src="../assets/slope/board.svg" alt=""></div><figcaption class="dont">A resort scene</figcaption></figure>
+      </div>
+      <div class="pair">
+        <figure><div class="plate paper words"><p>Fix what <span>breaks.</span></p></div><figcaption class="do">One berry phrase</figcaption></figure>
+        <figure><div class="plate words loud"><p>Fix what breaks.</p><b>GET STARTED</b></div><figcaption class="dont">Berry as a fill, white text on berry</figcaption></figure>
+      </div>
+      <div class="pair">
+        <figure><div class="plate paper"><canvas data-fig="plate" data-src="../assets/hero-mountains/photo.png" data-fit="base" data-cell="4" data-scale="1.6" data-x=".4" data-y=".2"></canvas></div><figcaption class="do">Squares do the work</figcaption></figure>
+        <figure><div class="plate paper"><img class="fill zoom" loading="lazy" src="../assets/hero-mountains/anaglyph.png" alt=""></div><figcaption class="dont">Blur and chromatic split</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="part night" id="cheatsheet">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ 12 — CHEAT SHEET ]</p>
+      <h2>To make something look like Alpic, <span>do these five things.</span></h2>
+    </header>
+    <ol class="five">
+      <li><h3>Start with squares.</h3><p>Pick one cell size, 4, 8 or 16 px, and put everything on that lattice.</p></li>
+      <li><h3>Reveal one thing.</h3><p>A mountain first. Otherwise a screen, a word or a photo. One per view.</p></li>
+      <li><h3>Add a track.</h3><p>Three to five irregular diagonals, square to square, never level or plumb.</p></li>
+      <li><h3>Set the type.</h3><p>Mozilla Text headline, Inter body, Roboto Mono label in brackets. One berry phrase.</p></li>
+      <li><h3>Pick day or night.</h3><p>Daylight for buyers, night for builders. One ↗, one berry accent, one sprite at most.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="part" id="summary">
+  <div class="wrap">
+    <header class="part-head">
+      <p class="label">[ FOR ERICA ]</p>
+      <h2>The guide in <span>five points.</span></h2>
+    </header>
+    <ol class="five day">
+      <li><h3>What we scaled back</h3><p>One mountain per view, three cell sizes, one sprite. Resort scenery and the blur, glitch and scanline treatments go.</p></li>
+      <li><h3>Mountain and dots</h3><p>The square leads and the mountain is what it reveals. Four steps turn any peak or photo into an Alpic mountain, in five variants.</p></li>
+      <li><h3>Ski energy</h3><p>Tracks: irregular diagonals between 35° and 65°, anchored on the 55° of the logo stripes. One small skier, always on a track.</p></li>
+      <li><h3>Light and dark</h3><p>Both, split by audience. Daylight for people who buy, night for people who build. One switch per page at most.</p></li>
+      <li><h3>How the team uses it</h3><p>Five rules on one sheet, the palette file, and the mountain playground, which already outputs on-system mountains.</p></li>
+    </ol>
+
+    <h3 class="sub">Assumptions and open items</h3>
+    <ul class="rules columns">
+      <li>Every value tagged <span class="tag guess">Proposal</span> is mine: cell sizes, densities, the angle range, line weights, colour ratios, sprite sizes, minimum sizes and motion timings.</li>
+      <li>Fonts are taken from the homepage, which loads Mozilla Text, Inter and Roboto Mono from Google Fonts. Confirm they match the Figma charter.</li>
+      <li>The homepage hero is the square plate: the peak turned into cells, with the trace on top.</li>
+      <li>The skier’s light pink is berry 300. The logo ink is #0B1C1A, which is still not a swatch. The nearest is midnight 900, #081C1B.</li>
+      <li>Lime roles come from the charter: light lime for backgrounds and buttons, lime when an accent has to stand out more, faded lime and border lime for quiet surfaces.</li>
+      <li>In-product UI was not reviewed. Its place on the dial comes from the brief, not from an audit of the dashboard.</li>
+      <li>Social posts are assumed square and decks 16:9.</li>
+    </ul>
+  </div>
+</section>
+
+</body>
+</html>

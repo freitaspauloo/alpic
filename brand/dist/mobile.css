@@ -1,0 +1,26 @@
+@media(max-width:760px){
+  .hero{padding:36px 6% 0}
+  .hero-intro{gap:22px;margin-bottom:28px}
+  .hero-copy p{max-width:none}
+  .hero-actions,.get-started-actions{flex-direction:column;align-items:stretch}
+  .hero-actions .button,.get-started-actions .button,.card .button{width:100%;white-space:normal;justify-content:space-between;min-height:48px;font-size:12px;padding:14px 16px}
+  .hero-art.square-mountain{height:auto;aspect-ratio:2276/1121;overflow:visible;margin-bottom:108px}
+  .hero-plate-switch{top:calc(100% + 14px);bottom:auto;left:0;right:0;width:auto;margin:0;flex-wrap:wrap;row-gap:8px;padding:8px}
+  .hero-plate-switch span{min-width:6.2em}
+  .hero-art>.mountain-config-trigger{top:calc(100% + 62px);bottom:auto;left:0;right:auto}
+  .trusted{padding:28px 2% 32px}
+  .trusted img{max-width:28%}
+  .card .button{margin-top:4px}
+  .interface-stage .lift-chat{padding:16px 16px 14px}
+  .lift-products{gap:8px}
+  .lift-product-name{margin:8px 8px 0;font-size:14px}
+  .lift-product-meta{margin:4px 8px 0}
+  .lift-cart{margin:8px}
+  .footer-columns{gap:32px 18px}
+  .get-started-top{padding-bottom:48px}
+  .footer-slope.is-open{height:clamp(320px,92vw,460px)}
+}
+@media(max-width:380px){
+  h1{font-size:36px}
+  .hero-plate-switch{font-size:11px}
+}
