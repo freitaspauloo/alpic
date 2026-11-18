@@ -10,3 +10,4 @@ The Tracks interface prototypes:
 
 - [`tracks`](tracks/README.md) — from the repo root, run `npm run tracks` and open http://127.0.0.1:4174.
 - [`tracks-v2`](tracks-v2) — from the repo root, run `npm run tracks:v2` and open http://127.0.0.1:4175. This is the version meant to deploy as a static Vite app (Vercel root directory `tracks-v2`).
+- [`v2`](v2) — a Tavus-paced Tracks flow (homepage, signup, role, tour, then the product). From the repo root, run `npm run v2` and open http://127.0.0.1:4178.
