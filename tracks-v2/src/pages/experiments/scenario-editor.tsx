@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Paperclip, Pencil, Plus, Trash2, TriangleAlert, Upload, X } from "lucide-react";
-import { MenuAction } from "@/app/menu";
+import { ChevronDown, ChevronLeft, ChevronRight, Paperclip, Pencil, Plus, Trash2, TriangleAlert, Upload, X } from "lucide-react";
+import { MenuAction, menuSurface } from "@/app/menu";
 import { Button } from "@/components/motion/button/base";
 import {
   CenterMorphModal,
   CenterMorphModalContent,
 } from "@/components/motion/center-morph-modal";
 import { Input } from "@/components/motion/input";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/motion/select";
 import { newId } from "@/data";
 import { radiusSteps, useDesign } from "@/design/theme";
@@ -314,8 +314,8 @@ export function ScenarioEditor({
               <span className="sr-only">{issueLabel(issues)}</span>
             </span>
           ) : null}
-          <MorphPopover open={listOpen} onOpenChange={setListOpen}>
-            <MorphPopoverTrigger>
+          <Popover open={listOpen} onOpenChange={setListOpen} side="bottom" align="end" panelRadius={radius}>
+            <PopoverTrigger>
               <button
                 type="button"
                 aria-label="Select scenario"
@@ -323,15 +323,14 @@ export function ScenarioEditor({
               >
                 <ChevronDown className="size-3.5" />
               </button>
-            </MorphPopoverTrigger>
-            <MorphPopoverContent side="bottom" align="end" sideOffset={8} radius={radius} className="flex w-64 flex-col p-1.5">
+            </PopoverTrigger>
+            <PopoverContent className={cn("flex w-64 max-w-none flex-col p-1.5", menuSurface)}>
               {scenarios.map((item, itemIndex) => {
                 const pending = scenarioIssues(item);
                 return (
                   <MenuAction
                     key={item.id}
                     active={itemIndex === index}
-                    trailing={itemIndex === index ? <Check className="size-3.5" /> : null}
                     onSelect={() => {
                       onIndex(itemIndex);
                       setListOpen(false);
@@ -342,8 +341,8 @@ export function ScenarioEditor({
                   </MenuAction>
                 );
               })}
-            </MorphPopoverContent>
-          </MorphPopover>
+            </PopoverContent>
+          </Popover>
         </div>
         <Button type="button" variant="ghost" size="icon" aria-label={`Rename ${label}`} onClick={() => { nameRef.current?.focus(); nameRef.current?.select(); }}>
           <Pencil className="size-3.5" />

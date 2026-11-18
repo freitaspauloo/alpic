@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Form
 import { animate } from "motion/react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  Check,
   ChevronRight,
   CreditCard,
   KeyRound,
@@ -43,12 +42,12 @@ import {
   CenterMorphModalContent,
 } from "@/components/motion/center-morph-modal";
 import { Input } from "@/components/motion/input";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { initial, money, useCurrentOrg, useOrgData, useOrgId, usePendingInvitations, useStore, type Organization } from "@/data";
 import { EASE_OUT } from "@/lib/ease";
 import { cn } from "@/lib/utils";
-import { MenuAction, MenuLabel, MenuSeparator } from "./menu";
+import { MenuAction, MenuLabel, MenuSeparator, menuSurface } from "./menu";
 import { NAV_PATHS, NAV_TREE, RAIL_ITEMS, activeNavId } from "./nav";
 import { NotFoundPage } from "./not-found";
 
@@ -210,8 +209,8 @@ function OrgSwitcher({ org }: { org: Organization }) {
 
   return (
     <>
-      <MorphPopover open={menuOpen} onOpenChange={setMenuOpen} className="min-w-0 flex-1">
-        <MorphPopoverTrigger>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen} side="bottom" align="start" panelRadius={menuRadius} className="min-w-0 flex-1">
+        <PopoverTrigger>
           <button
             type="button"
             aria-label={`Organization: ${org.name}. Switch organization`}
@@ -220,15 +219,14 @@ function OrgSwitcher({ org }: { org: Organization }) {
             <OrgMark name={org.name} />
             <span className="min-w-0 flex-1 truncate">{org.name}</span>
           </button>
-        </MorphPopoverTrigger>
-        <MorphPopoverContent side="bottom" align="start" sideOffset={8} radius={menuRadius} className="w-60 p-1.5">
+        </PopoverTrigger>
+        <PopoverContent className={cn("w-60 max-w-none p-1.5", menuSurface)}>
           <MenuLabel>Organizations</MenuLabel>
           {store.organizations.map((item) => (
             <MenuAction
               key={item.id}
               active={item.id === org.id}
               onSelect={() => go(`/${item.id}/experiments`)}
-              trailing={item.id === org.id ? <Check aria-hidden="true" className="size-3.5" /> : null}
             >
               <span className="flex items-center gap-2">
                 <OrgMark name={item.name} className="size-5 rounded-md text-[10px]" />
@@ -257,8 +255,8 @@ function OrgSwitcher({ org }: { org: Organization }) {
               ))}
             </>
           ) : null}
-        </MorphPopoverContent>
-      </MorphPopover>
+        </PopoverContent>
+      </Popover>
       <CreateOrgModal
         open={creating}
         onOpenChange={setCreating}
@@ -483,8 +481,8 @@ function UserMenu({ chrome }: { chrome: number }) {
   };
 
   return (
-    <MorphPopover open={menuOpen} onOpenChange={setMenuOpen}>
-      <MorphPopoverTrigger>
+    <Popover open={menuOpen} onOpenChange={setMenuOpen} side="top" align="start" panelRadius={menuRadius}>
+      <PopoverTrigger>
         <button
           type="button"
           aria-label={`${you.name}, user profile`}
@@ -500,8 +498,8 @@ function UserMenu({ chrome }: { chrome: number }) {
             <span className="truncate text-xs text-muted-foreground">User profile</span>
           </span>
         </button>
-      </MorphPopoverTrigger>
-      <MorphPopoverContent side="top" align="start" sideOffset={8} radius={menuRadius} className="w-64 p-1.5">
+      </PopoverTrigger>
+      <PopoverContent className={cn("w-64 max-w-none p-1.5", menuSurface)}>
         {org ? (
           <MenuAction
             icon={Wallet}
@@ -551,8 +549,8 @@ function UserMenu({ chrome }: { chrome: number }) {
         <MenuAction icon={LogOut} onSelect={() => go("/")}>
           Sign out
         </MenuAction>
-      </MorphPopoverContent>
-    </MorphPopover>
+      </PopoverContent>
+    </Popover>
   );
 }
 

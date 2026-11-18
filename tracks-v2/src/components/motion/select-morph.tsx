@@ -265,7 +265,7 @@ export function MorphSelectTrigger({
       <div
         aria-hidden
         inert
-        className={cn(ROW, "invisible rounded-xl border border-border")}
+        className={cn(ROW, "invisible rounded-xl border border-border", className)}
       >
         {children}
         <ChevronDown className="h-4 w-4" />

@@ -1,42 +1,34 @@
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowUp, ChevronDown, ChevronRight, GitBranch, Plus, Server, Sparkles, Terminal, X, type LucideIcon } from "lucide-react";
-import { MenuAction, MenuLabel, MenuSeparator } from "@/app/menu";
+import { ArrowRight, ChevronDown, ChevronRight, GitBranch, Globe, Plus, Server, Sparkles, Terminal, X, type LucideIcon } from "lucide-react";
+import { MenuAction, MenuLabel, MenuSeparator, menuSurface } from "@/app/menu";
 import { Button, type ButtonVariant } from "@/components/motion/button/base";
 import { Switch } from "@/components/motion/switch";
 import { Input } from "@/components/motion/input";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
+import { MorphSelect, MorphSelectContent, MorphSelectItem, MorphSelectTrigger } from "@/components/motion/select-morph";
 import { AGENT_PRESETS, DEFAULT_AGENT, SCENARIO_STARTERS, useStore } from "@/data";
 import { familyUsesStroke, resolveIcon } from "@/design/icons";
 import { radiusSteps, useDesign } from "@/design/theme";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_HOST = "acme.com";
+const NO_REPOSITORY = "none";
+const sourceTrigger =
+  "h-8 w-max justify-start gap-1.5 rounded-[var(--radius-control)] border-0 bg-transparent px-2 py-0 text-xs font-medium text-muted-foreground shadow-none hover:border-0 hover:bg-muted/60 hover:text-foreground focus-visible:ring-0";
 
 export type ComposerTools = {
   skillIds: string[];
   mcpIds: string[];
   cliIds: string[];
+  browser: boolean;
 };
 
-export type ToolCoverage = "both" | "with" | "without";
+type ToolListKey = "skillIds" | "mcpIds" | "cliIds";
 
-const EMPTY_TOOLS: ComposerTools = { skillIds: [], mcpIds: [], cliIds: [] };
+const EMPTY_TOOLS: ComposerTools = { skillIds: [], mcpIds: [], cliIds: [], browser: false };
 
-const COVERAGE_LABEL: Record<ToolCoverage, string> = {
-  both: "With & without tools",
-  with: "With only",
-  without: "Without only",
-};
-
-type ToolKind = "skills" | "mcp" | "cli";
-
-function includedLines(coverage: ToolCoverage, names: string[]) {
-  if (coverage === "without") return ["No tools"];
-  if (!names.length) return coverage === "both" ? ["No tools"] : ["No tools selected"];
-  if (coverage === "with") return names;
-  return ["No tools", ...names];
-}
+type ToolKind = "skills" | "mcp" | "cli" | "browser";
 
 export type ComposerDraft = {
   host: string;
@@ -72,8 +64,6 @@ export function ExperimentComposer({
   promptPlaceholder = "Describe what the agent should do.",
   tools: toolsProp,
   onToolsChange,
-  coverage: coverageProp,
-  onCoverageChange,
 }: {
   orgId: string;
   onContinue: (draft: ComposerDraft) => void;
@@ -95,8 +85,6 @@ export function ExperimentComposer({
   /** Skills, connectors, and command-line tools attached on the setup composer. */
   tools?: ComposerTools;
   onToolsChange?: (tools: ComposerTools) => void;
-  coverage?: ToolCoverage;
-  onCoverageChange?: (coverage: ToolCoverage) => void;
 }) {
   const navigate = useNavigate();
   const { repositories: allRepositories, skills: allSkills, mcpServers: allMcp, tools: allCli } = useStore();
@@ -112,21 +100,15 @@ export function ExperimentComposer({
   const RepoIcon = resolveIcon("folder-git-2", iconSettings.family, iconSettings.weight);
   const [inner, setInner] = useState<ComposerDraft>(value ?? EMPTY_DRAFT);
   const [innerTools, setInnerTools] = useState<ComposerTools>(EMPTY_TOOLS);
-  const [innerCoverage, setInnerCoverage] = useState<ToolCoverage>("both");
   const [starterLabel, setStarterLabel] = useState("");
   const [submenu, setSubmenu] = useState<ToolKind | null>(null);
-  const [menu, setMenu] = useState<null | "product" | "repo" | "branch" | "agent" | "attach" | "coverage">(null);
+  const [menu, setMenu] = useState<null | "product" | "repo" | "branch" | "agent" | "attach">(null);
   const tools = toolsProp ?? innerTools;
-  const coverage = coverageProp ?? innerCoverage;
   const setTools = (next: ComposerTools) => {
     if (!toolsProp) setInnerTools(next);
     onToolsChange?.(next);
   };
-  const setCoverage = (next: ToolCoverage) => {
-    if (!coverageProp) setInnerCoverage(next);
-    onCoverageChange?.(next);
-  };
-  const toggleTool = (key: keyof ComposerTools, id: string) => {
+  const toggleTool = (key: ToolListKey, id: string) => {
     const list = tools[key];
     setTools({ ...tools, [key]: list.includes(id) ? list.filter((item) => item !== id) : [...list, id] });
   };
@@ -159,8 +141,7 @@ export function ExperimentComposer({
     ...tools.skillIds.map((id) => ({ id, key: "skillIds" as const, name: skills.find((item) => item.id === id)?.name, icon: Sparkles })),
     ...tools.mcpIds.map((id) => ({ id, key: "mcpIds" as const, name: mcpServers.find((item) => item.id === id)?.name, icon: Server })),
     ...tools.cliIds.map((id) => ({ id, key: "cliIds" as const, name: cliTools.find((item) => item.id === id)?.name, icon: Terminal })),
-  ].filter((item): item is { id: string; key: keyof ComposerTools; name: string; icon: LucideIcon } => Boolean(item.name));
-  const chipNames = chips.map((item) => item.name);
+  ].filter((item): item is { id: string; key: ToolListKey; name: string; icon: LucideIcon } => Boolean(item.name));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -194,86 +175,127 @@ export function ExperimentComposer({
           </Picker>
         </div>
       ) : null}
-      <div className={cn("flex flex-wrap items-center px-1.5", showAgent ? "pt-0" : source ? "pt-1.5 pb-2" : "pt-1.5")}>
-        {source ? null : (
-          <Picker
-            open={menu === "product"}
-            onOpenChange={openMenu("product")}
-            radius={menuRadius}
-            label={`Product: ${product}`}
-            icon={<ProductIcon className="size-3.5" strokeWidth={stroke} />}
-            value={product}
-            panelClassName="w-72 gap-2 p-3"
-          >
-            <Input
-              label="Website"
-              value={host}
-              onChange={(nextHost) => {
-                patch({
-                  host: nextHost,
-                  ...(starter ? { prompt: starter.prompt.replaceAll("{website}", nextHost.trim() || DEFAULT_HOST) } : {}),
-                });
-              }}
-              placeholder={DEFAULT_HOST}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") event.preventDefault();
-              }}
-            />
-          </Picker>
-        )}
-        <Picker
-          open={menu === "repo"}
-          onOpenChange={openMenu("repo")}
-          radius={menuRadius}
-          label={repository ? `Repository: ${repository.name}` : "Repository"}
-          icon={<RepoIcon className="size-3.5" strokeWidth={stroke} />}
-          value={repository?.name ?? (source ? "Repository" : "No repository")}
-        >
-          <MenuLabel>Repository</MenuLabel>
-          <MenuAction active={!repository} onSelect={() => { patch({ repositoryId: null, branch: "" }); setMenu(null); }}>
-            No repository
-          </MenuAction>
-          {repositories.map((item) => (
-            <MenuAction key={item.id} active={item.id === repositoryId} onSelect={() => { patch({ repositoryId: item.id, branch: item.ref }); setMenu(null); }}>
-              {item.name}
-            </MenuAction>
-          ))}
-          <MenuSeparator />
-          <MenuAction icon={Plus} onSelect={() => navigate(`/${orgId}/library/repositories`)}>
-            Add repository
-          </MenuAction>
-        </Picker>
+      <div className={cn("flex flex-wrap items-center", showAgent ? "px-1.5 pt-0" : source ? "px-1.5 pt-1.5 pb-2" : "px-1.5 pt-1.5")}>
         {source ? (
-          <Picker
-            open={menu === "branch"}
-            onOpenChange={openMenu("branch")}
-            radius={menuRadius}
-            label={branch.trim() ? `Branch: ${branch}` : "Branch"}
-            icon={<GitBranch className="size-3.5" strokeWidth={stroke} />}
-            value={branch.trim() || "Branch"}
-            disabled={!repository}
-          >
-            <MenuLabel>Branch</MenuLabel>
-            {repository ? (
-              [...new Set([repository.ref, "main"])].map((ref) => (
-                <MenuAction key={ref} active={branch === ref} onSelect={() => { patch({ branch: ref }); setMenu(null); }}>
-                  <span className="font-mono">{ref}</span>
+          <>
+            <MorphSelect
+              value={repositoryId ?? NO_REPOSITORY}
+              onValueChange={(next) => {
+                if (next === NO_REPOSITORY) {
+                  patch({ repositoryId: null, branch: "" });
+                  return;
+                }
+                const item = repositories.find((repo) => repo.id === next);
+                patch({ repositoryId: next, branch: item?.ref ?? "" });
+              }}
+              className="w-max"
+            >
+              <MorphSelectTrigger className={sourceTrigger}>
+                <span className="inline-flex items-center gap-1.5">
+                  <RepoIcon className="size-3.5 shrink-0" strokeWidth={stroke} />
+                  <span className="max-w-40 truncate">{repository?.name ?? "Repository"}</span>
+                </span>
+              </MorphSelectTrigger>
+              <MorphSelectContent className="right-auto w-64">
+                <MorphSelectItem value={NO_REPOSITORY}>No repository</MorphSelectItem>
+                {repositories.map((item) => (
+                  <MorphSelectItem key={item.id} value={item.id}>{item.name}</MorphSelectItem>
+                ))}
+                <li role="none" className="mt-1 border-t border-border pt-1">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/${orgId}/library/repositories`)}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm text-foreground outline-none hover:bg-muted"
+                  >
+                    <Plus className="size-3.5" />
+                    Add repository
+                  </button>
+                </li>
+              </MorphSelectContent>
+            </MorphSelect>
+            <MorphSelect
+              value={branch}
+              disabled={!repository}
+              onValueChange={(next) => patch({ branch: next })}
+              className="w-max"
+            >
+              <MorphSelectTrigger className={sourceTrigger}>
+                <span className="inline-flex items-center gap-1.5">
+                  <GitBranch className="size-3.5 shrink-0" />
+                  <span className="max-w-40 truncate">{branch.trim() || "Branch"}</span>
+                </span>
+              </MorphSelectTrigger>
+              <MorphSelectContent className="right-auto w-48">
+                {repository
+                  ? [...new Set([repository.ref, "main"])].map((ref) => (
+                      <MorphSelectItem key={ref} value={ref}>{ref}</MorphSelectItem>
+                    ))
+                  : null}
+              </MorphSelectContent>
+            </MorphSelect>
+          </>
+        ) : (
+          <>
+            <Picker
+              open={menu === "product"}
+              onOpenChange={openMenu("product")}
+              radius={menuRadius}
+              label={`Product: ${product}`}
+              icon={<ProductIcon className="size-3.5" strokeWidth={stroke} />}
+              value={product}
+              panelClassName="w-72 gap-2 p-3"
+            >
+              <Input
+                label="Website"
+                value={host}
+                onChange={(nextHost) => {
+                  patch({
+                    host: nextHost,
+                    ...(starter ? { prompt: starter.prompt.replaceAll("{website}", nextHost.trim() || DEFAULT_HOST) } : {}),
+                  });
+                }}
+                placeholder={DEFAULT_HOST}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.preventDefault();
+                }}
+              />
+            </Picker>
+            <Picker
+              open={menu === "repo"}
+              onOpenChange={openMenu("repo")}
+              radius={menuRadius}
+              label={repository ? `Repository: ${repository.name}` : "Repository"}
+              icon={<RepoIcon className="size-3.5" strokeWidth={stroke} />}
+              value={repository?.name ?? "No repository"}
+            >
+              <MenuLabel>Repository</MenuLabel>
+              <MenuAction active={!repository} onSelect={() => { patch({ repositoryId: null, branch: "" }); setMenu(null); }}>
+                No repository
+              </MenuAction>
+              {repositories.map((item) => (
+                <MenuAction key={item.id} active={item.id === repositoryId} onSelect={() => { patch({ repositoryId: item.id, branch: item.ref }); setMenu(null); }}>
+                  {item.name}
                 </MenuAction>
-              ))
-            ) : (
-              <p className="px-2.5 py-1.5 text-xs text-muted-foreground">Pick a repository first.</p>
-            )}
-          </Picker>
-        ) : null}
+              ))}
+              <MenuSeparator />
+              <MenuAction icon={Plus} onSelect={() => navigate(`/${orgId}/library/repositories`)}>
+                Add repository
+              </MenuAction>
+            </Picker>
+          </>
+        )}
       </div>
       {source ? <div aria-hidden="true" className="h-px bg-foreground/5" /> : null}
 
       <div className={cn("flex gap-1 px-1.5", source ? "flex-col pt-2 pb-1.5" : "items-center pb-1.5")}>
-        {source && chips.length ? (
+        {source && (chips.length || tools.browser) ? (
           <div className="flex flex-wrap gap-1.5 px-0.5">
             {chips.map((chip) => (
               <ToolChip key={`${chip.key}-${chip.id}`} name={chip.name} icon={chip.icon} onRemove={() => toggleTool(chip.key, chip.id)} />
             ))}
+            {tools.browser ? (
+              <ToolChip name="Headless Chromium" icon={Globe} onRemove={() => setTools({ ...tools, browser: false })} />
+            ) : null}
           </div>
         ) : null}
         {showPrompt ? (
@@ -321,6 +343,7 @@ export function ExperimentComposer({
                   <ToolMenuRow icon={Sparkles} label="Skills" open={submenu === "skills"} onOpen={() => setSubmenu("skills")} />
                   <ToolMenuRow icon={Server} label="Connectors" open={submenu === "mcp"} onOpen={() => setSubmenu("mcp")} />
                   <ToolMenuRow icon={Terminal} label="CLIs" open={submenu === "cli"} onOpen={() => setSubmenu("cli")} />
+                  <ToolMenuRow icon={Globe} label="Browser" open={submenu === "browser"} onOpen={() => setSubmenu("browser")} />
                 </div>
                 {submenu ? (
                   <div className="flex w-64 flex-col border-l border-border p-1.5">
@@ -351,6 +374,15 @@ export function ExperimentComposer({
                         onToggle={(id) => toggleTool("cliIds", id)}
                         onManage={() => { setMenu(null); navigate(`/${orgId}/library/command-line-tools`); }}
                       />
+                    ) : null}
+                    {submenu === "browser" ? (
+                      <div className="flex flex-col gap-1">
+                        <MenuLabel>Browser</MenuLabel>
+                        <div className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+                          <span className="text-xs leading-4 text-muted-foreground">Headless Chromium, for agents without their own</span>
+                          <Switch checked={tools.browser} onCheckedChange={(on) => setTools({ ...tools, browser: on })} ariaLabel="Headless Chromium" />
+                        </div>
+                      </div>
                     ) : null}
                   </div>
                 ) : null}
@@ -410,41 +442,8 @@ export function ExperimentComposer({
             </button>
           ))}
           {source ? <span className="min-w-0 flex-1" /> : null}
-          {source ? (
-            <Picker
-              open={menu === "coverage"}
-              onOpenChange={openMenu("coverage")}
-              radius={menuRadius}
-              label={`Variants: ${COVERAGE_LABEL[coverage]}`}
-              value={COVERAGE_LABEL[coverage]}
-              side="top"
-              align="end"
-              triggerVariant="outline"
-              triggerClassName="rounded-full"
-              valueClassName="max-w-44"
-            >
-              {(Object.keys(COVERAGE_LABEL) as ToolCoverage[]).map((mode) => (
-                <MenuAction key={mode} active={coverage === mode} onSelect={() => { setCoverage(mode); setMenu(null); }}>
-                  {COVERAGE_LABEL[mode]}
-                </MenuAction>
-              ))}
-              <MenuSeparator />
-              <MenuLabel>Included</MenuLabel>
-              {includedLines(coverage, chipNames).map((line, index) => (
-                <p
-                  key={`${line}-${index}`}
-                  className={cn(
-                    "px-2.5 py-1.5 text-xs",
-                    line === "No tools" || line === "No tools selected" ? "text-muted-foreground" : "text-foreground",
-                  )}
-                >
-                  {line}
-                </p>
-              ))}
-            </Picker>
-          ) : null}
           <Button type="submit" size="icon" aria-label={actionLabel} disabled={!ready} className={cn("disabled:opacity-40", !source && "order-3")}>
-            <ArrowUp className="size-4" />
+            <ArrowRight className="size-4" />
           </Button>
         </div>
       </div>
@@ -486,8 +485,14 @@ function Picker({
   children: ReactNode;
 }) {
   return (
-    <MorphPopover open={disabled ? false : open} onOpenChange={disabled ? () => undefined : onOpenChange}>
-      <MorphPopoverTrigger>
+    <Popover
+      open={disabled ? false : open}
+      onOpenChange={disabled ? () => undefined : onOpenChange}
+      side={side}
+      align={align}
+      panelRadius={radius}
+    >
+      <PopoverTrigger>
         <Button
           type="button"
           variant={triggerVariant}
@@ -500,18 +505,18 @@ function Picker({
           {iconOnly ? null : <span className={cn("truncate", valueClassName)}>{value}</span>}
           {iconOnly ? null : <ChevronDown className="size-3.5 text-muted-foreground" />}
         </Button>
-      </MorphPopoverTrigger>
-      <MorphPopoverContent side={side} align={align} sideOffset={8} radius={radius} className={cn("flex flex-col", panelClassName)}>
+      </PopoverTrigger>
+      <PopoverContent className={cn("flex max-w-none flex-col", menuSurface, panelClassName)}>
         {children}
-      </MorphPopoverContent>
-    </MorphPopover>
+      </PopoverContent>
+    </Popover>
   );
 }
 
 function ToolMenuRow({ icon: Icon, label, open, onOpen }: { icon: LucideIcon; label: string; open: boolean; onOpen: () => void }) {
   return (
     <div onMouseEnter={onOpen}>
-      <MenuAction icon={Icon} active={open} trailing={<ChevronRight className="size-3.5" />} onSelect={onOpen}>
+      <MenuAction icon={Icon} active={open} check={false} trailing={<ChevronRight className="size-3.5" />} onSelect={onOpen}>
         {label}
       </MenuAction>
     </div>

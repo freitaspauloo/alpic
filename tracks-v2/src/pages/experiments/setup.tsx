@@ -1,32 +1,18 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bot, ChevronLeft, Copy, Pencil, Plus, Trash2, X, Zap } from "lucide-react";
+import { Bot, ChevronLeft, Minus, Plus, X, Zap } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { MenuAction, MenuLabel } from "@/app/menu";
-import {
-  AdaptiveStepper,
-  AdaptiveStepperDecrement,
-  AdaptiveStepperIncrement,
-  AdaptiveStepperValue,
-} from "@/components/motion/adaptive-stepper";
+import { MenuAction, MenuLabel, menuSurface } from "@/app/menu";
 import { Button } from "@/components/motion/button/base";
 import { Checkbox } from "@/components/motion/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/motion/select";
-import { AnimatedBadge } from "@/components/motion/animated-badge";
-import { Card } from "@/components/motion/card";
-import { Collapsible, CollapsibleIndicator, CollapsibleTrigger } from "@/components/motion/collapsible";
-import { Switch } from "@/components/motion/switch";
 import { Input } from "@/components/motion/input";
-import { MorphPopover, MorphPopoverContent, MorphPopoverTrigger } from "@/components/motion/popover-morph";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/motion/popover";
 import {
   DEFAULT_AGENT,
   money,
   newId,
   useStore,
-  type CommandLineTool,
-  type McpServer,
   type Scenario,
-  type Skill,
 } from "@/data";
 import { createScenario, scenarioPromptText, scenariosReady, type SetupEvaluation, type SetupScenario } from "./scenario-editor";
 import { radiusSteps, useDesign } from "@/design/theme";
@@ -34,7 +20,7 @@ import { EASE_OUT } from "@/lib/ease";
 import { useFavicon } from "@/lib/hooks/use-favicon";
 import { cn } from "@/lib/utils";
 import { HARNESS_CATALOG, PROVIDER_MARK, harnessesFor, modelsFor, type HarnessName, type Provider } from "@/pages/runs/shared";
-import { ExperimentComposer, type ComposerDraft, type ComposerTools, type ToolCoverage } from "./composer";
+import { ExperimentComposer, type ComposerDraft, type ComposerTools } from "./composer";
 
 type AgentChoice = { provider: Provider; harness: HarnessName; model: string; fast: boolean };
 type SetupAgent = AgentChoice & { id: string };
@@ -46,16 +32,12 @@ type ToolVariant = {
   skillId: string | null;
   toolId: string | null;
   mcpId: string | null;
-  browser: boolean;
   /** Names of the tools the composer attached to this variant. */
   picked: string[];
 };
 
-const BASELINE_COPY = "Runs with no skill, MCP server or command-line tool, to compare the other agent tools against.";
-const NONE = "none";
-
 function createToolVariant(name: string, baseline = false): ToolVariant {
-  return { id: newId("tv"), name, baseline, open: true, skillId: null, toolId: null, mcpId: null, browser: false, picked: [] };
+  return { id: newId("tv"), name, baseline, open: true, skillId: null, toolId: null, mcpId: null, picked: [] };
 }
 
 function pickedNames(
@@ -72,30 +54,28 @@ function pickedNames(
   ].filter((item): item is string => Boolean(item));
 }
 
-function variantsFor(picks: ComposerTools, coverage: ToolCoverage, prev: ToolVariant[], picked: string[]): ToolVariant[] {
-  const baselinePrev = prev.find((item) => item.baseline);
-  const withPrev = prev.find((item) => !item.baseline);
-  const baseline: ToolVariant = {
-    ...(baselinePrev ?? createToolVariant("No agent tools", true)),
-    baseline: true,
-    skillId: null,
-    toolId: null,
-    mcpId: null,
-    picked: [],
-  };
-  const withTools: ToolVariant = {
-    ...(withPrev ?? createToolVariant(picked.length ? picked.join(", ") : "With tools")),
-    name: picked.length ? picked.join(", ") : "With tools",
+function variantsFor(picks: ComposerTools, prev: ToolVariant[], picked: string[]): ToolVariant[] {
+  const current = prev[0];
+  if (!picked.length) {
+    return [{
+      ...(current ?? createToolVariant("No agent tools", true)),
+      name: "No agent tools",
+      baseline: true,
+      skillId: null,
+      toolId: null,
+      mcpId: null,
+      picked: [],
+    }];
+  }
+  return [{
+    ...(current ?? createToolVariant(picked.join(", "))),
+    name: picked.join(", "),
     baseline: false,
     skillId: picks.skillIds[0] ?? null,
     toolId: picks.cliIds[0] ?? null,
     mcpId: picks.mcpIds[0] ?? null,
     picked,
-  };
-  if (coverage === "without") return [baseline];
-  if (coverage === "with") return [withTools];
-  if (!picked.length) return [baseline];
-  return [baseline, withTools];
+  }];
 }
 
 function agentChoice(provider: Provider, harness?: HarnessName, model?: string, fast = false): AgentChoice {
@@ -133,8 +113,6 @@ function ProviderLogo({ provider }: { provider: Provider }) {
 
 const STEPS = [
   { id: "scenario", label: "Scenario" },
-  { id: "variants", label: "Variants" },
-  { id: "run", label: "Run settings" },
   { id: "review", label: "Review" },
 ] as const;
 
@@ -168,8 +146,7 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
   const [openAgent, setOpenAgent] = useState<string | null>(null);
   const [excluded, setExcluded] = useState<string[]>([]);
   const [toolVariants, setToolVariants] = useState<ToolVariant[]>(() => [createToolVariant("No agent tools", true)]);
-  const [toolPicks, setToolPicks] = useState<ComposerTools>({ skillIds: [], mcpIds: [], cliIds: [] });
-  const [coverage, setCoverage] = useState<ToolCoverage>("both");
+  const [toolPicks, setToolPicks] = useState<ComposerTools>({ skillIds: [], mcpIds: [], cliIds: [], browser: false });
   const [repetition, setRepetition] = useState(1);
   const [spend, setSpend] = useState("1.00");
   const [spendTouched, setSpendTouched] = useState(false);
@@ -212,11 +189,13 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
     if (!spendTouched) setSpend((runs * CENTS_PER_RUN / 100).toFixed(2));
   };
 
-  const commitTools = (picks: ComposerTools, nextCoverage: ToolCoverage) => {
-    const picked = pickedNames(picks, skills, mcpServers, tools);
-    const next = variantsFor(picks, nextCoverage, toolVariants, picked);
+  const commitTools = (picks: ComposerTools) => {
+    const picked = [
+      ...pickedNames(picks, skills, mcpServers, tools),
+      ...(picks.browser ? ["Headless Chromium"] : []),
+    ];
+    const next = variantsFor(picks, toolVariants, picked);
     setToolPicks(picks);
-    setCoverage(nextCoverage);
     setToolVariants(next);
     syncSpend(included.length * next.length * repetition * scenarioCount);
   };
@@ -278,9 +257,7 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
 
   const stepReady = (index: number) => {
     const id = STEPS[index]?.id;
-    if (id === "scenario") return scenarioReady;
-    if (id === "variants") return toolVariants.length > 0;
-    if (id === "run") return spendReady;
+    if (id === "scenario") return scenarioReady && spendReady;
     return true;
   };
 
@@ -308,17 +285,12 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
     }
     if (!roster.length) {
       setError("Pick at least one agent.");
-      setStep(1);
-      return;
-    }
-    if (!toolVariants.length) {
-      setError("Add at least one agent tool variant.");
-      setStep(1);
+      setStep(0);
       return;
     }
     if (!spendReady) {
       setError("Enter a max spend, like 2.00.");
-      setStep(3);
+      setStep(0);
       return;
     }
 
@@ -370,9 +342,15 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
   };
   const meta = `${totalRuns} ${totalRuns === 1 ? "run" : "runs"} · ${money(Math.round((spendReady ? spendDollars : 0) * 100))} max · ${money(CENTS_PER_RUN)} a run`;
   const active = STEPS[step];
+  const setRepetitionCount = (value: number) => {
+    const next = Math.max(1, value);
+    setRepetition(next);
+    syncSpend(included.length * Math.max(toolVariants.length, 0) * next * scenarioCount);
+  };
   return (
-    <div className="flex flex-1 flex-col items-center px-6 pb-16 pt-16">
-      <div className="flex w-[min(42rem,calc(100vw-8rem))] flex-col gap-4">
+    <div className="flex min-h-full flex-1 flex-col">
+    <div className="flex flex-1 flex-col items-center px-6 pt-16">
+      <div className="flex w-full max-w-[42rem] flex-col gap-4 pb-8">
         <nav aria-label="Setup steps" className="flex w-full items-start">
           {STEPS.map((item, index) => {
             const current = index === step;
@@ -434,85 +412,24 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
               source
               promptPlaceholder="Starting message"
               tools={toolPicks}
-              onToolsChange={(next) => commitTools(next, coverage)}
-              coverage={coverage}
-              onCoverageChange={(next) => commitTools(toolPicks, next)}
+              onToolsChange={commitTools}
             />
-            <div className="flex flex-col items-start gap-2">
-              {currentScenario?.evaluations.map((evaluation, evaluationIndex) => {
-                const title = evaluation.name.trim() || `Evaluation ${evaluationIndex + 1}`;
-                return (
-                  <Collapsible
-                    key={evaluation.id}
-                    open={evaluation.open}
-                    onOpenChange={(open) => updateEvaluation(evaluation.id, { open })}
-                  >
-                    <div className="flex w-full items-center gap-1">
-                      <CollapsibleTrigger className="w-auto min-w-0 flex-1" aria-label={evaluation.open ? `Collapse ${title}` : `Expand ${title}`}>
-                        <CollapsibleIndicator className="ml-0" />
-                        <span className="shrink-0">{title}</span>
-                        {evaluation.open ? null : (
-                          <span className="min-w-0 flex-1 truncate font-normal text-muted-foreground">
-                            {evaluation.instructions.trim() || "Judging instructions"}
-                          </span>
-                        )}
-                      </CollapsibleTrigger>
-                      <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${title}`} onClick={() => removeEvaluation(evaluation.id)}>
-                        <X className="size-3.5" />
-                      </Button>
-                    </div>
-                    {evaluation.open ? (
-                      <div className="flex flex-col gap-3 px-3 pt-3 pb-1">
-                        <Input
-                          label="Name"
-                          aria-label={`${title} name`}
-                          value={evaluation.name}
-                          placeholder={title}
-                          onChange={(value) => updateEvaluation(evaluation.id, { name: value })}
-                        />
-                        <label className="flex flex-col gap-1.5">
-                          <span className="px-1 text-sm font-medium text-foreground">Judging instructions</span>
-                          <textarea
-                            aria-label="Judging instructions"
-                            rows={3}
-                            value={evaluation.instructions}
-                            placeholder="What the agent must do or say to pass."
-                            onChange={(event) => updateEvaluation(evaluation.id, { instructions: event.target.value })}
-                            className="min-h-20 w-full resize-y rounded-[var(--radius-lg)] border border-border bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring"
-                          />
-                        </label>
-                      </div>
-                    ) : null}
-                  </Collapsible>
-                );
-              })}
+            <div className="flex w-full flex-col gap-2">
+              {currentScenario?.evaluations.map((evaluation, evaluationIndex) => (
+                <EvaluationLine
+                  key={evaluation.id}
+                  evaluation={evaluation}
+                  index={evaluationIndex}
+                  onChange={(patch) => updateEvaluation(evaluation.id, patch)}
+                  onRemove={() => removeEvaluation(evaluation.id)}
+                />
+              ))}
               <Button type="button" variant="ghost" size="sm" onClick={addEvaluation}>
                 <Plus className="size-3.5" />
                 Add evaluation
               </Button>
             </div>
             {error ? <p role="alert" className="px-2 text-xs text-destructive">{error}</p> : null}
-          </div>
-        ) : active.id === "variants" ? (
-          <div className="mt-20 flex w-full flex-col gap-4">
-            <AgentTools
-              variants={toolVariants}
-              skills={skills}
-              tools={tools}
-              mcpServers={mcpServers}
-              onChange={(next) => {
-                setToolVariants(next);
-                syncSpend(included.length * next.length * repetition * scenarioCount);
-              }}
-            />
-            <div className="flex items-center justify-between">
-              <Button type="button" variant="ghost" size="sm" onClick={() => go(step - 1)}>
-                Back
-              </Button>
-              <Button type="button" size="sm" disabled={!stepReady(step)} onClick={continueStep}>
-                Continue
-              </Button>
-            </div>
           </div>
         ) : (
         <section aria-labelledby="setup-step-title" className="rounded-[var(--radius-2xl)] bg-card p-4">
@@ -533,53 +450,19 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
               transition={{ duration: 0.16, ease: EASE_OUT }}
               className="flex flex-col gap-3"
             >
-              {active.id === "run" ? (
-                <>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-foreground">Repetition</span>
-                    <AdaptiveStepper
-                      value={repetition}
-                      min={1}
-                      max={5}
-                      aria-label="Repetition"
-                      onValueChange={(value) => {
-                        setRepetition(value);
-                        syncSpend(included.length * Math.max(toolVariants.length, 0) * value * scenarioCount);
-                      }}
-                    >
-                      <AdaptiveStepperDecrement />
-                      <AdaptiveStepperValue />
-                      <AdaptiveStepperIncrement />
-                    </AdaptiveStepper>
-                  </div>
-                  <Input
-                    label="Max spend"
-                    value={spend}
-                    onChange={(value) => {
-                      setSpendTouched(true);
-                      setSpend(value);
-                    }}
-                    placeholder="2.00"
-                  />
-                  <p className="text-xs text-muted-foreground">{meta}</p>
-                </>
-              ) : (
-                <>
-                  <Input label="Experiment" value={name} onChange={setName} placeholder="Untitled experiment" />
-                  <dl className="grid gap-3 text-sm">
-                    <ReviewRow label="Product" value={summary.product} />
-                    <ReviewRow label="Repository" value={summary.repository} />
-                    <ReviewRow label="Branch" value={branch.trim() || repository?.ref || "None"} />
-                    <ReviewRow label="Scenarios" value={summary.scenarios.join(", ") || "None"} />
-                    <ReviewRow label="Agents" value={summary.agents.join(", ") || "None"} />
-                    <ReviewRow label="Agent tools" value={summary.tools.join(", ") || "None"} />
-                    <ReviewRow label="Evaluations" value={summary.evaluations.join(", ") || "None"} />
-                    <ReviewRow label="Files" value={summary.files.join(", ") || "None"} />
-                    <ReviewRow label="Runs" value={String(summary.runs)} />
-                    <ReviewRow label="Max spend" value={money(Math.round((spendReady ? spendDollars : 0) * 100))} />
-                  </dl>
-                </>
-              )}
+              <Input label="Experiment" value={name} onChange={setName} placeholder="Untitled experiment" />
+              <dl className="grid gap-3 text-sm">
+                <ReviewRow label="Product" value={summary.product} />
+                <ReviewRow label="Repository" value={summary.repository} />
+                <ReviewRow label="Branch" value={branch.trim() || repository?.ref || "None"} />
+                <ReviewRow label="Scenarios" value={summary.scenarios.join(", ") || "None"} />
+                <ReviewRow label="Agents" value={summary.agents.join(", ") || "None"} />
+                <ReviewRow label="Agent tools" value={summary.tools.join(", ") || "None"} />
+                <ReviewRow label="Evaluations" value={summary.evaluations.join(", ") || "None"} />
+                <ReviewRow label="Files" value={summary.files.join(", ") || "None"} />
+                <ReviewRow label="Runs" value={String(summary.runs)} />
+                <ReviewRow label="Max spend" value={money(Math.round((spendReady ? spendDollars : 0) * 100))} />
+              </dl>
             </motion.div>
           </AnimatePresence>
           <div className="mt-4 flex items-center justify-between gap-3">
@@ -598,159 +481,161 @@ export function ExperimentSetup({ orgId, initial }: { orgId: string; initial?: C
         )}
       </div>
     </div>
-  );
-}
-
-function AgentTools({
-  variants,
-  skills,
-  tools,
-  mcpServers,
-  onChange,
-}: {
-  variants: ToolVariant[];
-  skills: Skill[];
-  tools: CommandLineTool[];
-  mcpServers: McpServer[];
-  onChange: (next: ToolVariant[]) => void;
-}) {
-  const design = useDesign();
-  const radius = Math.round(radiusSteps(design.radius).xl);
-  const patch = (id: string, next: Partial<ToolVariant>) => {
-    onChange(variants.map((item) => (item.id === id ? { ...item, ...next } : item)));
-  };
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-medium text-foreground">Agent tools</h2>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onChange([...variants, createToolVariant(`Agent tools ${variants.length + 1}`)])}
+    {active.id === "scenario" ? (
+      <div className="@container sticky bottom-0 z-20 mt-auto border-t border-border bg-background/95 px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+        <div
+          className="mx-auto flex h-12 w-full max-w-[42rem] flex-wrap items-center gap-x-3 gap-y-2"
+          style={{ paddingRight: "max(0px, calc(4.5rem - (100cqw - min(42rem, 100cqw)) / 2))" }}
         >
-          <Plus className="size-3.5" />
-          Add agent tools
-        </Button>
-      </div>
-      {variants.map((variant) => (
-        <Card key={variant.id} variant="outlined" size="compact" className="gap-3 py-3">
-          <Collapsible open={variant.open} onOpenChange={(open) => patch(variant.id, { open })}>
-            <div className="flex items-center gap-1 px-2">
-              <CollapsibleTrigger className="w-auto min-w-0 flex-1 px-2" aria-label={variant.open ? `Collapse ${variant.name}` : `Expand ${variant.name}`}>
-                <CollapsibleIndicator className="ml-0" />
-                <span className="truncate">{variant.name}</span>
-                {variant.baseline ? (
-                  <AnimatedBadge status="neutral" size="sm" showIcon={false}>
-                    Baseline
-                  </AnimatedBadge>
-                ) : null}
-              </CollapsibleTrigger>
-              <MorphPopover>
-                <MorphPopoverTrigger>
-                  <Button type="button" variant="ghost" size="icon" aria-label={`Rename ${variant.name}`}>
-                    <Pencil className="size-3.5" />
-                  </Button>
-                </MorphPopoverTrigger>
-                <MorphPopoverContent side="bottom" align="end" sideOffset={8} radius={radius} className="w-64 p-3">
-                  <Input label="Name" value={variant.name} onChange={(name) => patch(variant.id, { name })} />
-                </MorphPopoverContent>
-              </MorphPopover>
-              <Button
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-sm text-muted-foreground">Repetition</span>
+            <div className="flex h-8 items-center rounded-[var(--radius-control)] border border-border focus-within:border-foreground/40 focus-within:ring-2 focus-within:ring-ring/40">
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Duplicate ${variant.name}`}
-                onClick={() => onChange([...variants, { ...variant, id: newId("tv"), name: `${variant.name} copy`, baseline: false, open: true }])}
+                aria-label="Decrease repetition"
+                disabled={repetition <= 1}
+                onClick={() => setRepetitionCount(repetition - 1)}
+                className="flex size-8 items-center justify-center text-muted-foreground outline-none disabled:opacity-40"
               >
-                <Copy className="size-3.5" />
-              </Button>
-              <Button
+                <Minus className="size-3.5" />
+              </button>
+              <span className="min-w-4 text-center text-sm tabular-nums text-foreground">{repetition}</span>
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Remove ${variant.name}`}
-                onClick={() => onChange(variants.filter((item) => item.id !== variant.id))}
+                aria-label="Increase repetition"
+                onClick={() => setRepetitionCount(repetition + 1)}
+                className="flex size-8 items-center justify-center text-muted-foreground outline-none disabled:opacity-40"
               >
-                <Trash2 className="size-3.5" />
-              </Button>
+                <Plus className="size-3.5" />
+              </button>
             </div>
-            {variant.open ? (
-              <div className="flex flex-col gap-4 px-4 pt-3">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {variant.baseline
-                    ? BASELINE_COPY
-                    : variant.picked.length
-                      ? `Runs with ${variant.picked.join(", ")}.`
-                      : "Compared with the baseline, using the tools selected here."}
-                </p>
-                <ToolSelect
-                  label="Skills"
-                  value={variant.skillId}
-                  empty="No skill"
-                  options={skills.map((item) => ({ id: item.id, name: item.name }))}
-                  onChange={(skillId) => patch(variant.id, { skillId })}
-                />
-                <ToolSelect
-                  label="Command-line tools"
-                  value={variant.toolId}
-                  empty="No command-line tool"
-                  options={tools.map((item) => ({ id: item.id, name: item.name }))}
-                  onChange={(toolId) => patch(variant.id, { toolId })}
-                />
-                <ToolSelect
-                  label="MCP servers"
-                  value={variant.mcpId}
-                  empty="No MCP server"
-                  options={mcpServers.map((item) => ({ id: item.id, name: item.name }))}
-                  onChange={(mcpId) => patch(variant.id, { mcpId })}
-                />
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-foreground">Browser</span>
-                  <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2">
-                    <span className="text-sm text-muted-foreground">Headless Chromium, for agents without their own</span>
-                    <Switch checked={variant.browser} onCheckedChange={(browser) => patch(variant.id, { browser })} ariaLabel="Headless Chromium" />
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </Collapsible>
-        </Card>
-      ))}
+          </div>
+          <Input
+            label="Max spend"
+            aria-label="Max spend"
+            value={spend}
+            onChange={(value) => {
+              setSpendTouched(true);
+              setSpend(value);
+            }}
+            placeholder="2.00"
+            className="w-36 max-w-full"
+            classNames={{
+              root: "flex-row items-center gap-2",
+              label: "shrink-0 px-0 font-normal text-muted-foreground",
+              field: "h-8 min-w-0 flex-1",
+              input: "text-sm leading-5",
+            }}
+          />
+          <p className="min-w-0 text-xs text-muted-foreground sm:ml-auto">{meta}</p>
+        </div>
+      </div>
+    ) : null}
     </div>
   );
 }
 
-function ToolSelect({
-  label,
-  value,
-  empty,
-  options,
+const INSTRUCTIONS_MAX = 128;
+
+function fitInstructions(field: HTMLTextAreaElement) {
+  field.style.height = "auto";
+  field.style.height = `${Math.min(field.scrollHeight, INSTRUCTIONS_MAX)}px`;
+}
+
+function EvaluationLine({
+  evaluation,
+  index,
   onChange,
+  onRemove,
 }: {
-  label: string;
-  value: string | null;
-  empty: string;
-  options: { id: string; name: string }[];
-  onChange: (id: string | null) => void;
+  evaluation: SetupEvaluation;
+  index: number;
+  onChange: (patch: Partial<SetupEvaluation>) => void;
+  onRemove: () => void;
 }) {
+  const title = evaluation.name.trim() || `Evaluation ${index + 1}`;
+  const instructions = evaluation.instructions.trim();
+  const [nameOpen, setNameOpen] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <Select value={value ?? NONE} onValueChange={(next) => onChange(next === NONE ? null : next)}>
-        <SelectTrigger>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>{empty}</SelectItem>
-          {options.map((item) => (
-            <SelectItem key={item.id} value={item.id}>
-              {item.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex w-full items-start gap-1">
+      {nameOpen ? (
+        <input
+          autoFocus
+          aria-label={`${title} name`}
+          value={evaluation.name}
+          placeholder={title}
+          onChange={(event) => onChange({ name: event.target.value })}
+          onBlur={() => setNameOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              event.currentTarget.blur();
+            }
+          }}
+          className="h-8 w-36 shrink-0 bg-transparent px-1 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/60"
+        />
+      ) : (
+        <button type="button" onClick={() => setNameOpen(true)} className="flex h-8 shrink-0 items-center px-1 text-left text-sm font-medium text-foreground">
+          {title}
+        </button>
+      )}
+      {instructionsOpen ? (
+        <InstructionsField
+          value={evaluation.instructions}
+          onChange={(next) => onChange({ instructions: next })}
+          onClose={() => setInstructionsOpen(false)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setInstructionsOpen(true)}
+          className={cn(
+            "max-h-32 min-h-8 min-w-0 flex-1 overflow-y-auto px-1 py-1.5 text-left text-sm leading-5 whitespace-pre-wrap",
+            instructions ? "text-foreground" : "text-muted-foreground/60",
+          )}
+        >
+          {instructions || "Judging instructions"}
+        </button>
+      )}
+      <Button type="button" variant="ghost" size="icon" aria-label={`Remove ${title}`} onClick={onRemove}>
+        <X className="size-3.5" />
+      </Button>
     </div>
+  );
+}
+
+function InstructionsField({
+  value,
+  onChange,
+  onClose,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onClose: () => void;
+}) {
+  const field = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = field.current;
+    if (!el) return;
+    fitInstructions(el);
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, []);
+  return (
+    <textarea
+      ref={field}
+      aria-label="Judging instructions"
+      rows={1}
+      value={value}
+      placeholder="Judging instructions"
+      onChange={(event) => {
+        onChange(event.target.value);
+        fitInstructions(event.currentTarget);
+      }}
+      onBlur={onClose}
+      className="max-h-32 min-h-8 w-full min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-1 py-1.5 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground/60"
+    />
   );
 }
 
@@ -776,18 +661,18 @@ function AgentBar({
     <div className="flex flex-wrap items-center gap-1.5">
       {roster.map((agent) => (
         <div key={agent.id} className="relative inline-flex max-w-full">
-        <MorphPopover open={openId === agent.id} onOpenChange={(open) => { if (open) setStep("model"); onOpen(open ? agent.id : null); }}>
-          <MorphPopoverTrigger>
+        <Popover open={openId === agent.id} onOpenChange={(open) => { if (open) setStep("model"); onOpen(open ? agent.id : null); }} side="bottom" align="start" panelRadius={radius}>
+          <PopoverTrigger>
             <Button type="button" variant="outline" size="sm" aria-label={agentTitle(agent)} className="h-8 gap-1.5 rounded-full pr-8 pl-2.5">
               <ProviderLogo provider={agent.provider} />
               {agent.fast ? <Zap className="size-3.5" aria-hidden="true" /> : null}
               <span className="max-w-36 truncate font-mono font-normal text-muted-foreground">{agent.model}</span>
             </Button>
-          </MorphPopoverTrigger>
-          <MorphPopoverContent side="bottom" align="start" sideOffset={8} radius={radius} className="flex w-96 flex-col gap-3 p-3">
+          </PopoverTrigger>
+          <PopoverContent className={cn("flex w-96 max-w-none flex-col gap-3 p-3", menuSurface)}>
             <AgentFields value={agent} step={step} onStep={setStep} onChange={(next) => onChange(agent.id, next)} />
-          </MorphPopoverContent>
-        </MorphPopover>
+          </PopoverContent>
+        </Popover>
         <Button
           type="button"
           variant="ghost"
@@ -812,7 +697,7 @@ function AddAgent({ radius, onAdd }: { radius: number; onAdd: (choice: AgentChoi
   const [step, setStep] = useState<AgentStep>("harness");
   const [draft, setDraft] = useState<AgentChoice>(() => agentChoice("Anthropic"));
   return (
-    <MorphPopover
+    <Popover
       open={open}
       onOpenChange={(next) => {
         if (next) {
@@ -821,22 +706,25 @@ function AddAgent({ radius, onAdd }: { radius: number; onAdd: (choice: AgentChoi
         }
         setOpen(next);
       }}
+      side="bottom"
+      align="start"
+      panelRadius={radius}
     >
-      <MorphPopoverTrigger>
+      <PopoverTrigger>
         <Button type="button" variant="ghost" size="sm">
           <Plus className="size-3.5" />
           Add agent
         </Button>
-      </MorphPopoverTrigger>
-      <MorphPopoverContent side="bottom" align="start" sideOffset={8} radius={radius} className="flex w-96 flex-col gap-3 p-3">
+      </PopoverTrigger>
+      <PopoverContent className={cn("flex w-96 max-w-none flex-col gap-3 p-3", menuSurface)}>
         <AgentFields value={draft} step={step} onStep={setStep} onChange={setDraft} />
         {step === "model" ? (
           <Button type="button" size="sm" onClick={() => { onAdd(draft); setOpen(false); }}>
             Add
           </Button>
         ) : null}
-      </MorphPopoverContent>
-    </MorphPopover>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -870,8 +758,8 @@ function AgentFields({
                   onStep("model");
                 }}
                 className={cn(
-                  "flex min-w-0 flex-col items-start gap-1 rounded-lg px-2.5 py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring",
-                  selected && "bg-muted",
+                  "flex min-w-0 flex-col items-start gap-1 rounded-lg px-2.5 py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:bg-muted",
+                  selected ? "bg-muted text-foreground" : "text-muted-foreground",
                 )}
               >
                 <span className="flex items-center gap-1.5">

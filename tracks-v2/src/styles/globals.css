@@ -37,8 +37,8 @@
     --background: oklch(99% 0 0);
     --foreground: oklch(15% 0 0);
     --card: oklch(97% 0 0);
-    --muted-foreground: oklch(50% 0 0);
-    --border: oklch(15% 0 0 / 0.06);
+    --muted-foreground: oklch(42% 0 0);
+    --border: oklch(15% 0 0 / 0.12);
     /* beUI extensions */
     --border-raised: oklch(15% 0 0 / 0.12);
     --border-strong: oklch(15% 0 0 / 0.12);
@@ -60,7 +60,7 @@
     --primary-foreground: #ffffff;
     --secondary: var(--card);
     --secondary-foreground: var(--foreground);
-    --muted: var(--card);
+    --muted: oklch(94% 0 0);
     --accent: oklch(72% 0.18 195);
     --accent-foreground: var(--accent-fg);
     --destructive: var(--danger);
@@ -98,6 +98,7 @@
     --background: #151515;
     --foreground: oklch(96% 0 0);
     --card: #1c1c1c;
+    --muted: var(--card);
     --muted-foreground: oklch(62% 0 0);
     --border: rgb(255 255 255 / 0.05);
     --border-raised: rgb(255 255 255 / 0.16);
